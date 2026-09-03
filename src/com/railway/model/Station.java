@@ -9,8 +9,13 @@ import java.util.Objects;
 public class Station implements Comparable<Station> {
     private final String id;
     private final String name;
+    private final String state;
+    private final String district;
+    private final String zone;
+    private final double mapX;
+    private final double mapY;
 
-    public Station(String id, String name) {
+    public Station(String id, String name, String state, String district, String zone, double mapX, double mapY) {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("Station ID cannot be empty.");
         }
@@ -19,6 +24,15 @@ public class Station implements Comparable<Station> {
         }
         this.id = id.trim().toUpperCase();
         this.name = name.trim();
+        this.state = (state != null && !state.trim().isEmpty()) ? state.trim() : "All India";
+        this.district = (district != null && !district.trim().isEmpty()) ? district.trim() : this.name;
+        this.zone = (zone != null && !zone.trim().isEmpty()) ? zone.trim() : "IR";
+        this.mapX = mapX;
+        this.mapY = mapY;
+    }
+
+    public Station(String id, String name) {
+        this(id, name, "All India", name, "IR", 450.0, 240.0);
     }
 
     public String getId() {
@@ -27,6 +41,26 @@ public class Station implements Comparable<Station> {
 
     public String getName() {
         return name;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public String getZone() {
+        return zone;
+    }
+
+    public double getMapX() {
+        return mapX;
+    }
+
+    public double getMapY() {
+        return mapY;
     }
 
     @Override

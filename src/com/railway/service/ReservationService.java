@@ -32,13 +32,25 @@ public class ReservationService {
         private final boolean success;
         private final String message;
         private final Reservation cancelledReservation;
-        private final Reservation promotedReservation; // Non-null if a waitlisted passenger got promoted
+        private final Reservation promotedReservation; // Non-null if a waitlisted/RAC passenger got promoted
+        private final double refundAmount;
+        private final double cancellationCharge;
+        private final String refundTxnId;
 
-        public CancellationResult(boolean success, String message, Reservation cancelledReservation, Reservation promotedReservation) {
+        public CancellationResult(boolean success, String message, Reservation cancelledReservation,
+                                  Reservation promotedReservation, double refundAmount,
+                                  double cancellationCharge, String refundTxnId) {
             this.success = success;
             this.message = message;
             this.cancelledReservation = cancelledReservation;
             this.promotedReservation = promotedReservation;
+            this.refundAmount = refundAmount;
+            this.cancellationCharge = cancellationCharge;
+            this.refundTxnId = refundTxnId;
+        }
+
+        public CancellationResult(boolean success, String message, Reservation cancelledReservation, Reservation promotedReservation) {
+            this(success, message, cancelledReservation, promotedReservation, 0.0, 0.0, "");
         }
 
         public boolean isSuccess() {
@@ -56,12 +68,24 @@ public class ReservationService {
         public Reservation getPromotedReservation() {
             return promotedReservation;
         }
+
+        public double getRefundAmount() {
+            return refundAmount;
+        }
+
+        public double getCancellationCharge() {
+            return cancellationCharge;
+        }
+
+        public String getRefundTxnId() {
+            return refundTxnId;
+        }
     }
 
     public ReservationService(RailwayNetworkService networkService, TrainService trainService) {
         this.networkService = networkService;
         this.trainService = trainService;
-        this.reservationMap = new LinkedHashMap<>();
+        this.reservationMap = new java.util.concurrent.ConcurrentHashMap<>();
         this.pnrCounter = new AtomicInteger(100101);
     }
 
@@ -97,11 +121,68 @@ public class ReservationService {
                                                String gender, String passengerId,
                                                String sourceId, String destId, String travelClass,
                                                String bookedByUsername) {
-        Train train = trainService.getTrainDirect(trainId);
-        if (train == null) {
-            throw new IllegalArgumentException("Train '" + trainId + "' not found.");
-        }
+        return bookTicket(trainId, passengerName, age, gender, passengerId, sourceId, destId, travelClass, bookedByUsername, "GENERAL");
+    }
 
+    /**
+     * Books a ticket supporting Quotas (GENERAL vs EMERGENCY) with authentic pricing & seat allocation.
+     * Emergency quota can be booked within 24 hours of departure at 2x the original price.
+     * Dynamically resolves the train that travels through the selected stations if none specified or if mismatched.
+     */
+    public synchronized Reservation bookTicket(String trainId, String passengerName, int age,
+                                               String gender, String passengerId,
+                                               String sourceId, String destId, String travelClass,
+                                               String bookedByUsername, String quota) {
+        return bookTicket(trainId, passengerName, age, gender, passengerId, sourceId, destId, travelClass, bookedByUsername, quota, 1);
+    }
+
+    /**
+     * Books multiple seats for a primary passenger and companions.
+     */
+    public synchronized Reservation bookTicket(String trainId, String passengerName, int age,
+                                               String gender, String passengerId,
+                                               String sourceId, String destId, String travelClass,
+                                               String bookedByUsername, String quota, int seatCount) {
+        return bookTicket(trainId, passengerName, age, gender, passengerId, sourceId, destId, travelClass, bookedByUsername, quota, seatCount, null);
+    }
+
+    /**
+     * Books multiple seats for a primary passenger and companions with explicit travel date.
+     */
+    public synchronized Reservation bookTicket(String trainId, String passengerName, int age,
+                                               String gender, String passengerId,
+                                               String sourceId, String destId, String travelClass,
+                                               String bookedByUsername, String quota, int seatCount, String travelDate) {
+        int count = Math.max(1, Math.min(6, seatCount));
+        List<Passenger> list = new ArrayList<>();
+        list.add(new Passenger(passengerId, passengerName, age, gender));
+        if (count > 1) {
+            for (int i = 2; i <= count; i++) {
+                list.add(new Passenger(passengerId + "-P" + i, passengerName + " (Guest " + i + ")", age, gender));
+            }
+        }
+        return bookTickets(trainId, list, sourceId, destId, travelClass, bookedByUsername, quota, travelDate);
+    }
+
+    /**
+     * Books multiple tickets for an explicit list of passengers (up to 6 passengers).
+     */
+    public synchronized Reservation bookTickets(String trainId, List<Passenger> passengers,
+                                                String sourceId, String destId, String travelClass,
+                                                String bookedByUsername, String quota) {
+        return bookTickets(trainId, passengers, sourceId, destId, travelClass, bookedByUsername, quota, null);
+    }
+
+    /**
+     * Books multiple tickets with designated travel/journey date.
+     */
+    public synchronized Reservation bookTickets(String trainId, List<Passenger> passengers,
+                                                String sourceId, String destId, String travelClass,
+                                                String bookedByUsername, String quota, String travelDate) {
+        if (passengers == null || passengers.isEmpty()) {
+            throw new IllegalArgumentException("At least one passenger required for booking.");
+        }
+        int seatCount = Math.max(1, Math.min(6, passengers.size()));
         Station source = networkService.getStation(sourceId);
         Station dest = networkService.getStation(destId);
 
@@ -109,12 +190,20 @@ public class ReservationService {
             throw new IllegalArgumentException("Invalid source or destination station.");
         }
 
-        if (!train.servesRoute(source, dest)) {
-            throw new IllegalArgumentException("Train " + train.getName() + " does not operate from "
-                    + source.getId() + " to " + dest.getId() + ".");
+        Train train = (trainId != null && !trainId.trim().isEmpty()) ? trainService.getTrainDirect(trainId) : null;
+        if (train == null || !train.servesRoute(source, dest)) {
+            List<Train> matchingTrains = trainService.searchTrains(source.getId(), dest.getId());
+            if (!matchingTrains.isEmpty()) {
+                train = matchingTrains.get(0);
+            } else {
+                train = trainService.findOrCreateCorridorTrain(source, dest);
+            }
         }
 
-        // Calculate distance and fare with travel class multiplier
+        if (train == null) {
+            throw new IllegalArgumentException("No train service available between " + source.getName() + " and " + dest.getName() + ".");
+        }
+
         DijkstraResult<Station> routeResult = networkService.findShortestRoute(source.getId(), dest.getId());
         double distance = routeResult.isReachable() ? routeResult.getTotalDistance() : 350.0;
 
@@ -138,25 +227,79 @@ public class ReservationService {
             selectedClass = "General";
         }
 
-        double fare = Math.round(distance * train.getFarePerKm() * classMultiplier * 100.0) / 100.0;
-        if (fare < 40.0) fare = 40.0; // Minimum railway base fare
+        double singleFare = Math.round(distance * train.getFarePerKm() * classMultiplier * 100.0) / 100.0;
+        if (singleFare < 40.0) singleFare = 40.0;
 
-        Passenger passenger = new Passenger(passengerId, passengerName, age, gender);
+        String selectedQuota = (quota != null && !quota.trim().isEmpty()) ? quota.trim().toUpperCase() : "GENERAL";
+        boolean isEmergency = "EMERGENCY".equals(selectedQuota) || "TATKAL".equals(selectedQuota);
+        if (isEmergency) {
+            singleFare = Math.round(singleFare * 2.0 * 100.0) / 100.0;
+            selectedQuota = "EMERGENCY";
+        }
+
+        double totalFare = Math.round(singleFare * seatCount * 100.0) / 100.0;
+        Passenger primaryPassenger = passengers.get(0);
         String pnr = generateUniquePnr();
 
-        int seat = train.allocateSeat();
-        Reservation reservation;
+        boolean isGeneral = "General".equalsIgnoreCase(selectedClass)
+                || selectedClass.toLowerCase().contains("general")
+                || selectedClass.toLowerCase().contains("second sitting");
 
-        if (seat > 0) {
-            // Seat available -> Confirmed
-            reservation = new Reservation(pnr, passenger, train.getId(), train.getName(),
-                    source, dest, seat, BookingStatus.CONFIRMED, 0, fare, LocalDateTime.now(), selectedClass, bookedByUsername);
+        Reservation reservation;
+        if (isGeneral) {
+            // General class (Second Sitting Unreserved): 200 seats capacity, open unreserved seating.
+            for (int i = 0; i < seatCount; i++) {
+                train.allocateSeat("General");
+            }
+            reservation = new Reservation(pnr, primaryPassenger, train.getId(), train.getName(),
+                    source, dest, 0, BookingStatus.CONFIRMED, 0, 0, totalFare,
+                    LocalDateTime.now(), selectedClass, bookedByUsername, selectedQuota,
+                    train.getDepartureTime(), train.getArrivalTime());
+            reservation.setSeatNumbers(new ArrayList<>());
+            reservation.setSeatCount(seatCount);
+            reservation.setPassengers(passengers);
         } else {
-            // No seats -> Placed in Waiting List Queue (FIFO)
-            int wlPos = train.getWaitingListCount() + 1;
-            reservation = new Reservation(pnr, passenger, train.getId(), train.getName(),
-                    source, dest, 0, BookingStatus.WAITING_LIST, wlPos, fare, LocalDateTime.now(), selectedClass, bookedByUsername);
-            train.enqueueWaitingList(reservation);
+            List<Integer> allocatedSeats = new ArrayList<>();
+            for (int i = 0; i < seatCount; i++) {
+                int s = train.allocateSeat(selectedClass);
+                if (s > 0) {
+                    allocatedSeats.add(s);
+                }
+            }
+
+            if (!allocatedSeats.isEmpty()) {
+                reservation = new Reservation(pnr, primaryPassenger, train.getId(), train.getName(),
+                        source, dest, allocatedSeats.get(0), BookingStatus.CONFIRMED, 0, 0, totalFare,
+                        LocalDateTime.now(), selectedClass, bookedByUsername, selectedQuota,
+                        train.getDepartureTime(), train.getArrivalTime());
+                reservation.setSeatNumbers(allocatedSeats);
+                reservation.setSeatCount(seatCount);
+                reservation.setPassengers(passengers);
+            } else {
+                int racNo = train.allocateRacSeat();
+                if (racNo > 0) {
+                    reservation = new Reservation(pnr, primaryPassenger, train.getId(), train.getName(),
+                            source, dest, 0, BookingStatus.RAC, 0, racNo, totalFare,
+                            LocalDateTime.now(), selectedClass, bookedByUsername, selectedQuota,
+                            train.getDepartureTime(), train.getArrivalTime());
+                    reservation.setSeatCount(seatCount);
+                    reservation.setPassengers(passengers);
+                    train.enqueueRac(reservation);
+                } else {
+                int wlPos = train.getWaitingListCount() + 1;
+                reservation = new Reservation(pnr, primaryPassenger, train.getId(), train.getName(),
+                        source, dest, 0, BookingStatus.WAITING_LIST, wlPos, 0, totalFare,
+                        LocalDateTime.now(), selectedClass, bookedByUsername, selectedQuota,
+                        train.getDepartureTime(), train.getArrivalTime());
+                reservation.setSeatCount(seatCount);
+                reservation.setPassengers(passengers);
+                train.enqueueWaitingList(reservation);
+                }
+            }
+        }
+
+        if (travelDate != null && !travelDate.trim().isEmpty()) {
+            reservation.setTravelDate(travelDate.trim());
         }
 
         reservationMap.put(pnr, reservation);
@@ -183,7 +326,8 @@ public class ReservationService {
 
     /**
      * Cancels a reservation by PNR.
-     * Demonstrates Queue Dequeue & Waitlist Auto-Promotion.
+     * Calculates 20% refund of the ticket price (80% cancellation fee deducted).
+     * Demonstrates Queue Dequeue & Waitlist/RAC Auto-Promotion Cascade.
      */
     public synchronized CancellationResult cancelTicket(String pnr) {
         if (pnr == null || pnr.trim().isEmpty()) {
@@ -196,7 +340,8 @@ public class ReservationService {
         }
 
         if (reservation.getStatus() == BookingStatus.CANCELLED) {
-            return new CancellationResult(false, "Ticket " + pnr + " is already cancelled.", reservation, null);
+            return new CancellationResult(false, "Ticket " + pnr + " is already cancelled.", reservation, null,
+                    reservation.getRefundAmount(), reservation.getFare() - reservation.getRefundAmount(), "");
         }
 
         Train train = trainService.getTrainDirect(reservation.getTrainId());
@@ -206,50 +351,111 @@ public class ReservationService {
 
         BookingStatus previousStatus = reservation.getStatus();
         reservation.setStatus(BookingStatus.CANCELLED);
+
+        // Refund Policy: 80% refunded to passenger, 20% retained as Railway cancellation/clerkage fee
+        double cancellationCharge = Math.round(reservation.getFare() * 0.20 * 100.0) / 100.0;
+        double refundAmount = Math.round((reservation.getFare() - cancellationCharge) * 100.0) / 100.0;
+        reservation.setRefundAmount(refundAmount);
+        String refundTxnId = "REFUND-RAIL-" + Math.abs((pnr + System.currentTimeMillis()).hashCode() % 900000 + 100000);
+
         Reservation promotedReservation = null;
 
         if (previousStatus == BookingStatus.CONFIRMED) {
-            int releasedSeatNumber = reservation.getSeatNumber();
+            List<Integer> releasedSeats = new ArrayList<>(reservation.getSeatNumbers());
+            if (releasedSeats.isEmpty() && reservation.getSeatNumber() > 0) {
+                releasedSeats.add(reservation.getSeatNumber());
+            }
             reservation.setSeatNumber(0);
+            reservation.setSeatNumbers(Collections.emptyList());
 
-            // Check if there is a passenger waiting in the train's FIFO queue
-            if (train.getWaitingListCount() > 0) {
-                // Dequeue first passenger in queue (FIFO)
-                promotedReservation = train.dequeueWaitingList();
-                if (promotedReservation != null) {
-                    promotedReservation.setStatus(BookingStatus.CONFIRMED);
-                    promotedReservation.setSeatNumber(releasedSeatNumber);
-                    promotedReservation.setWaitingListNumber(0);
+            for (int releasedSeatNumber : releasedSeats) {
+                if (train.getRacListCount() > 0) {
+                    Reservation promotedRac = train.dequeueRac();
+                    if (promotedRac != null) {
+                        promotedRac.setStatus(BookingStatus.CONFIRMED);
+                        promotedRac.setSeatNumber(releasedSeatNumber);
+                        promotedRac.setSeatNumbers(Collections.singletonList(releasedSeatNumber));
+                        promotedRac.setRacNumber(0);
+                        promotedReservation = promotedRac;
 
-                    // Update waiting list positions for remaining queue members
-                    updateWaitingListPositions(train);
-
-                    return new CancellationResult(true,
-                            "Ticket " + pnr + " cancelled. Released Seat #" + releasedSeatNumber +
-                            " automatically assigned to Waitlist passenger " + promotedReservation.getPassenger().getName() +
-                            " (PNR: " + promotedReservation.getPnr() + ")!",
-                            reservation, promotedReservation);
+                        if (train.getWaitingListCount() > 0) {
+                            Reservation promotedWl = train.dequeueWaitingList();
+                            if (promotedWl != null) {
+                                promotedWl.setStatus(BookingStatus.RAC);
+                                promotedWl.setRacNumber(train.getRacSeats() - train.getAvailableRacSeats() + 1);
+                                promotedWl.setWaitingListNumber(0);
+                                train.enqueueRac(promotedWl);
+                                updateWaitingListPositions(train);
+                            }
+                        } else {
+                            train.releaseRacSeat();
+                        }
+                        continue;
+                    }
                 }
+
+                if (train.getWaitingListCount() > 0) {
+                    Reservation promotedWl = train.dequeueWaitingList();
+                    if (promotedWl != null) {
+                        promotedWl.setStatus(BookingStatus.CONFIRMED);
+                        promotedWl.setSeatNumber(releasedSeatNumber);
+                        promotedWl.setSeatNumbers(Collections.singletonList(releasedSeatNumber));
+                        promotedWl.setWaitingListNumber(0);
+                        updateWaitingListPositions(train);
+                        promotedReservation = promotedWl;
+                        continue;
+                    }
+                }
+                train.releaseSeat(reservation.getTravelClass());
             }
 
-            // If no one on waitlist, return seat to available inventory
-            train.releaseSeat();
+            String msg;
+            if (reservation.isGeneralClass()) {
+                for (int i = 0; i < reservation.getSeatCount(); i++) {
+                    train.releaseSeat("General");
+                }
+                msg = "General Unreserved Ticket " + pnr + " cancelled successfully. 80% Refund of ₹" + String.format("%.2f", refundAmount) +
+                        " processed (20% cancellation fee ₹" + String.format("%.2f", cancellationCharge) + " retained, Txn: " + refundTxnId + "). (Unreserved General Seating - Released from 200 General capacity).";
+            } else {
+                msg = "Ticket " + pnr + " cancelled successfully. 80% Refund of ₹" + String.format("%.2f", refundAmount) +
+                        " processed (20% cancellation fee ₹" + String.format("%.2f", cancellationCharge) + " retained, Txn: " + refundTxnId + "). Released " + (releasedSeats.size() > 1 ? releasedSeats.size() + " seats" : "Seat #" + (releasedSeats.isEmpty() ? "" : releasedSeats.get(0))) + "!";
+                if (promotedReservation != null) {
+                    msg += " Assigned to waiting passenger " + promotedReservation.getPassenger().getName() + "!";
+                }
+            }
+            return new CancellationResult(true, msg, reservation, promotedReservation, refundAmount, cancellationCharge, refundTxnId);
+
+        } else if (previousStatus == BookingStatus.RAC) {
+            train.removeFromRac(reservation);
+            if (train.getWaitingListCount() > 0) {
+                Reservation promotedWl = train.dequeueWaitingList();
+                if (promotedWl != null) {
+                    promotedWl.setStatus(BookingStatus.RAC);
+                    promotedWl.setRacNumber(reservation.getRacNumber());
+                    promotedWl.setWaitingListNumber(0);
+                    train.enqueueRac(promotedWl);
+                    updateWaitingListPositions(train);
+                    promotedReservation = promotedWl;
+                }
+            } else {
+                train.releaseRacSeat();
+            }
+
             return new CancellationResult(true,
-                    "Ticket " + pnr + " cancelled successfully. Seat #" + releasedSeatNumber +
-                    " released back to train inventory.",
-                    reservation, null);
+                    "RAC Ticket " + pnr + " cancelled. 80% Refund of ₹" + String.format("%.2f", refundAmount) + " credited (20% cancellation charge ₹" + String.format("%.2f", cancellationCharge) + " retained).",
+                    reservation, promotedReservation, refundAmount, cancellationCharge, refundTxnId);
 
         } else if (previousStatus == BookingStatus.WAITING_LIST) {
-            // Cancelled from waitlist -> remove from queue
             train.removeFromWaitingList(reservation);
             updateWaitingListPositions(train);
 
             return new CancellationResult(true,
-                    "Waitlisted ticket " + pnr + " removed from waiting list.",
-                    reservation, null);
+                    "Waiting List Ticket " + pnr + " cancelled. 80% Refund of ₹" + String.format("%.2f", refundAmount) + " credited (20% cancellation charge ₹" + String.format("%.2f", cancellationCharge) + " retained).",
+                    reservation, null, refundAmount, cancellationCharge, refundTxnId);
         }
 
-        return new CancellationResult(true, "Ticket cancelled.", reservation, null);
+        return new CancellationResult(true, "Ticket cancelled. 80% Refund of ₹" + String.format("%.2f", refundAmount) +
+                " processed (20% cancellation charge ₹" + String.format("%.2f", cancellationCharge) + " retained).", reservation, null, refundAmount, cancellationCharge, refundTxnId);
     }
 
     /**

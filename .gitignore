@@ -22,3 +22,8 @@ desktop.ini
 *.log
 *.tmp
 *.bak
+
+# Environment & Secrets
+.env
+scratch/
+

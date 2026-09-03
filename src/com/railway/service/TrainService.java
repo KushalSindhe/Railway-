@@ -21,15 +21,39 @@ public class TrainService {
 
     public TrainService(RailwayNetworkService networkService) {
         this.networkService = networkService;
-        this.trainMap = new LinkedHashMap<>();
+        this.trainMap = new java.util.concurrent.ConcurrentHashMap<>();
     }
 
     /**
-     * Adds a new train to the fleet.
-     * Enforces unique train ID and validates stations.
+     * Adds a new train to the fleet with default timings and 2 RAC seats.
      */
     public synchronized Train addTrain(String trainId, String name, String sourceId, String destId,
                                        List<String> stopStationIds, int totalSeats, double farePerKm) {
+        int rac = totalSeats <= 5 ? 0 : 2;
+        int eq = totalSeats <= 5 ? 0 : 2;
+        return addTrain(trainId, name, sourceId, destId, stopStationIds, totalSeats, farePerKm, "06:00", "14:30", "8h 30m", rac, eq);
+    }
+
+    /**
+     * Adds a new train with scheduled departure/arrival timings, journey duration, RAC quota, and emergency seats.
+     */
+    public synchronized Train addTrain(String trainId, String name, String sourceId, String destId,
+                                       List<String> stopStationIds, int totalSeats, double farePerKm,
+                                       String departureTime, String arrivalTime, String duration,
+                                       int racSeats, int emergencySeats) {
+        return addTrain(trainId, name, sourceId, destId, stopStationIds, totalSeats, farePerKm,
+                departureTime, arrivalTime, duration, racSeats, emergencySeats,
+                Train.SEATS_1A, Train.SEATS_2A, Train.SEATS_3A, Train.SEATS_SL, Train.SEATS_GN);
+    }
+
+    /**
+     * Adds a new train with explicit per-class seat capacities (1A, 2A, 3A, SL, GN).
+     */
+    public synchronized Train addTrain(String trainId, String name, String sourceId, String destId,
+                                       List<String> stopStationIds, int totalSeats, double farePerKm,
+                                       String departureTime, String arrivalTime, String duration,
+                                       int racSeats, int emergencySeats,
+                                       int seats1A, int seats2A, int seats3A, int seatsSL, int seatsGN) {
         if (trainId == null || trainId.trim().isEmpty()) {
             throw new IllegalArgumentException("Train ID cannot be empty.");
         }
@@ -69,7 +93,9 @@ public class TrainService {
             routeStops.add(destination);
         }
 
-        Train train = new Train(cleanId, name, source, destination, routeStops, totalSeats, farePerKm);
+        Train train = new Train(cleanId, name, source, destination, routeStops, totalSeats, farePerKm,
+                departureTime, arrivalTime, duration, racSeats, emergencySeats,
+                seats1A, seats2A, seats3A, seatsSL, seatsGN);
         trainMap.put(cleanId, train);
         return train;
     }
@@ -117,6 +143,58 @@ public class TrainService {
     }
 
     /**
+     * Resolves an existing direct train or dynamically generates a corridor intercity express
+     * along the shortest railway track path connecting source and destination stations.
+     */
+    public synchronized Train findOrCreateCorridorTrain(Station src, Station dst) {
+        if (src == null || dst == null || src.equals(dst)) return null;
+
+        List<Train> existing = searchTrains(src.getId(), dst.getId());
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+
+        com.railway.dsa.DijkstraResult<Station> result = networkService.findShortestRoute(src.getId(), dst.getId());
+        List<Station> path = result.getPath();
+        if (path == null || path.size() < 2) {
+            path = Arrays.asList(src, dst);
+        }
+
+        String trainId = "EXP-" + src.getId() + "-" + dst.getId();
+        if (trainMap.containsKey(trainId)) {
+            return trainMap.get(trainId);
+        }
+
+        double distance = result.isReachable() ? result.getTotalDistance() : 500.0;
+        int speedKmph = 75;
+        double hoursNeeded = distance / speedKmph;
+        int hours = (int) hoursNeeded;
+        int mins = (int) ((hoursNeeded - hours) * 60);
+        String durationStr = hours + "h " + (mins < 10 ? "0" + mins : mins) + "m";
+
+        String trainName = "Bharat " + src.getName() + " - " + dst.getName() + " Superfast";
+        List<String> stopCodes = new ArrayList<>();
+        for (Station s : path) {
+            stopCodes.add(s.getId());
+        }
+
+        return addTrain(
+                trainId,
+                trainName,
+                src.getId(),
+                dst.getId(),
+                stopCodes,
+                250,
+                1.45,
+                "07:00",
+                String.format("%02d:%02d", (7 + hours) % 24, mins),
+                durationStr,
+                25,
+                10
+        );
+    }
+
+    /**
      * Returns all trains in the fleet.
      */
     public List<Train> getAllTrains() {
@@ -159,5 +237,34 @@ public class TrainService {
                 query,
                 t -> t.getId() + " " + t.getName()
         );
+    }
+
+    /**
+     * Retrieves a train by its unique ID.
+     */
+    public Train getTrain(String trainId) {
+        if (trainId == null) return null;
+        return trainMap.get(trainId.trim());
+    }
+
+    /**
+     * Randomly reconfigures confirmed available seats and waitlist numbers across all trains
+     * to simulate a busy, dynamic national railway network with diverse booking demands.
+     */
+    public synchronized void randomizeAllTrainInventories() {
+        java.util.Random rand = new java.util.Random();
+        for (Train train : trainMap.values()) {
+            train.randomizeSeatAndWaitlist(rand);
+        }
+    }
+
+    /**
+     * Incrementally fluctuates confirmed seats and waitlists to simulate real-time bookings and cancellations.
+     */
+    public synchronized void fluctuateAllTrainInventories() {
+        java.util.Random rand = new java.util.Random();
+        for (Train train : trainMap.values()) {
+            train.fluctuateInventory(rand);
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.railway.ui;
 
 import com.railway.dsa.DijkstraResult;
 import com.railway.model.BookingStatus;
+import com.railway.model.Passenger;
 import com.railway.model.Reservation;
 import com.railway.model.Station;
 import com.railway.model.Train;
@@ -13,6 +14,7 @@ import com.railway.service.ReservationService;
 import com.railway.service.ReservationService.CancellationResult;
 import com.railway.service.TrainService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
@@ -181,7 +183,7 @@ public class PassengerMenu {
             if (i < train.getRouteStops().size() - 1) System.out.print(" -> ");
         }
         System.out.println();
-        System.out.println("  Total Coach Capacity: " + train.getTotalSeats() + " seats");
+        System.out.println("  Total Train Capacity: " + train.getTotalSeats() + " seats (1A: 25, 2A: 50, 3A: 70, SL: 150, GN: 200)");
         if (train.getAvailableSeats() > 0) {
             System.out.println("  Status: " + GREEN + BOLD + "AVAILABLE (" + train.getAvailableSeats() + " seats remaining)" + RESET);
         } else {
@@ -223,35 +225,43 @@ public class PassengerMenu {
             return;
         }
 
-        String defaultName = loggedInUser != null ? loggedInUser.getFullName() : "";
-        System.out.print("  Enter Passenger Full Name" + (!defaultName.isEmpty() ? " [" + defaultName + "]" : "") + ": ");
-        String name = scanner.nextLine().trim();
-        if (name.isEmpty() && !defaultName.isEmpty()) name = defaultName;
-        if (name.isEmpty()) {
-            System.out.println("  " + RED + "Passenger name cannot be blank." + RESET);
-            pause();
-            return;
+        System.out.print("  Enter Number of Seats / Passengers (1-6) [default 1]: ");
+        String seatCountInput = scanner.nextLine().trim();
+        int seatCount = 1;
+        if (!seatCountInput.isEmpty()) {
+            try {
+                seatCount = Math.max(1, Math.min(6, Integer.parseInt(seatCountInput)));
+            } catch (NumberFormatException ignored) {}
         }
 
-        System.out.print("  Enter Passenger Age: ");
-        int age = readInt();
-        if (age <= 0 || age > 120) {
-            System.out.println("  " + RED + "Invalid age." + RESET);
-            pause();
-            return;
+        List<Passenger> passengerList = new ArrayList<>();
+        for (int i = 1; i <= seatCount; i++) {
+            System.out.println(CYAN + "  -- Passenger #" + i + (i == 1 ? " (Lead Passenger)" : "") + " --" + RESET);
+            String defName = (i == 1 && loggedInUser != null) ? loggedInUser.getFullName() : "";
+            System.out.print("    Full Name" + (!defName.isEmpty() ? " [" + defName + "]" : "") + ": ");
+            String pName = scanner.nextLine().trim();
+            if (pName.isEmpty()) pName = !defName.isEmpty() ? defName : "Passenger " + i;
+
+            System.out.print("    Age [default 25]: ");
+            String aStr = scanner.nextLine().trim();
+            int pAge = 25;
+            if (!aStr.isEmpty()) {
+                try { pAge = Math.max(1, Math.min(120, Integer.parseInt(aStr))); } catch (Exception ignored) {}
+            }
+
+            System.out.print("    Gender (M/F/O) [default M]: ");
+            String pGen = scanner.nextLine().trim().toUpperCase();
+            if (pGen.isEmpty()) pGen = "M";
+
+            passengerList.add(new Passenger("GOV-" + (System.currentTimeMillis() + i) % 100000, pName, pAge, pGen));
         }
 
-        System.out.print("  Enter Gender (M/F/O): ");
-        String gender = scanner.nextLine().trim().toUpperCase();
-
-        System.out.print("  Enter Passenger ID / Gov ID: ");
-        String idNumber = scanner.nextLine().trim();
         System.out.println("  Select Travel Class:");
-        System.out.println("    [1] 1st Class (1A)   - Luxury AC Coupe & Berths (2.4x)");
-        System.out.println("    [2] 2nd Class (2A)   - AC 2-Tier Sleeper (1.8x)");
-        System.out.println("    [3] 3 Tier AC (3A)   - AC 3-Tier Comfort (1.25x)");
-        System.out.println("    [4] Sleeper (SL)     - Standard Non-AC Sleeper (0.65x)");
-        System.out.println("    [5] General (GN)     - Second Sitting Unreserved (0.35x)");
+        System.out.println("    [1] 1st Class (1A)   - Luxury AC Coupe & Berths (25 Seats, 2.4x)");
+        System.out.println("    [2] 2nd Class (2A)   - AC 2-Tier Sleeper (50 Seats, 1.8x)");
+        System.out.println("    [3] 3 Tier AC (3A)   - AC 3-Tier Comfort (70 Seats, 1.25x)");
+        System.out.println("    [4] Sleeper (SL)     - Standard Non-AC Sleeper (150 Seats, 0.65x)");
+        System.out.println("    [5] General (GN)     - Second Sitting Unreserved (200 Seats, 0.35x)");
         System.out.print("  Enter Travel Class [1-5, default 3]: ");
         String classChoice = scanner.nextLine().trim();
         String travelClass = "3 Tier AC";
@@ -263,25 +273,37 @@ public class PassengerMenu {
 
         try {
             String bookedBy = loggedInUser != null ? loggedInUser.getUsername() : null;
-            Reservation res = reservationService.bookTicket(train.getId(), name, age, gender, idNumber, src, dst, travelClass, bookedBy);
+            Reservation res = reservationService.bookTickets(train.getId(), passengerList, src, dst, travelClass, bookedBy, "GENERAL");
             System.out.println("\n" + GREEN + BOLD + "╔════════════════════════════════════════════════════════════════╗");
             System.out.println("║                   TICKET BOOKING SUCCESSFUL!                   ║");
             System.out.println("╚════════════════════════════════════════════════════════════════╝" + RESET);
             System.out.println("  PNR Number:       " + BOLD + CYAN + res.getPnr() + RESET);
-            System.out.println("  Passenger:        " + res.getPassenger().getName() + " (" + res.getPassenger().getAge() + " yrs, " + res.getPassenger().getGender() + ")");
+            if (res.isGeneralClass()) {
+                System.out.println("  Booking Category: " + BOLD + CYAN + "UNRESERVED (Open Seating - Coach GS1, No Reserved Seats)" + RESET);
+                System.out.println("  Passengers:       " + res.getPassengersDisplay() + " (" + res.getSeatCount() + " Passenger" + (res.getSeatCount() > 1 ? "s" : "") + ")");
+            } else {
+                System.out.println("  Seats Booked:     " + BOLD + YELLOW + res.getSeatCount() + " Seat" + (res.getSeatCount() > 1 ? "s" : "") + RESET + " (" + res.getSeatNumbersDisplay() + ")");
+                System.out.println("  Passengers:       " + res.getPassengersDisplay());
+            }
             System.out.println("  Train:            " + res.getTrainName() + " (" + res.getTrainId() + ")");
-            System.out.println("  Travel Class:     " + BOLD + YELLOW + res.getTravelClass() + RESET);
+            System.out.println("  Travel Class:     " + BOLD + YELLOW + res.getTravelClass() + (res.isGeneralClass() ? " (Unreserved)" : "") + RESET);
             if (res.getBookedByUsername() != null) {
                 System.out.println("  Linked Account:   " + GREEN + "@" + res.getBookedByUsername() + RESET);
             }
             System.out.println("  Route:            " + res.getSourceStation().getName() + " -> " + res.getDestinationStation().getName());
             if (res.getStatus() == BookingStatus.CONFIRMED) {
-                System.out.println("  Status:           " + GREEN + BOLD + "CONFIRMED (Seat #" + res.getSeatNumber() + ")" + RESET);
+                if (res.isGeneralClass()) {
+                    System.out.println("  Status:           " + GREEN + BOLD + "CONFIRMED (Unreserved Open Seating - Coach GS1)" + RESET);
+                } else {
+                    System.out.println("  Status:           " + GREEN + BOLD + "CONFIRMED (" + res.getSeatNumbersDisplay() + ")" + RESET);
+                }
+            } else if (res.getStatus() == BookingStatus.RAC) {
+                System.out.println("  Status:           " + YELLOW + BOLD + "RAC (Position: RAC-" + res.getRacNumber() + ")" + RESET);
             } else {
                 System.out.println("  Status:           " + YELLOW + BOLD + "WAITING LIST (Position: WL-" + res.getWaitingListNumber() + ")" + RESET);
                 System.out.println("  " + CYAN + "Note: If a confirmed ticket is cancelled, this ticket will be automatically confirmed in FIFO order!" + RESET);
             }
-            System.out.printf("  Total Fare:       ₹%.2f\n", res.getFare());
+            System.out.printf("  Total Fare Paid:  ₹%.2f (%d Seat%s)\n", res.getFare(), res.getSeatCount(), res.getSeatCount() > 1 ? "s" : "");
             System.out.println("  Booking Time:     " + res.getFormattedBookingTime());
             System.out.println("──────────────────────────────────────────────────────────────────");
         } catch (Exception e) {

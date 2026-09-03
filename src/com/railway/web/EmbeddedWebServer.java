@@ -3,6 +3,7 @@ package com.railway.web;
 import com.railway.dsa.DijkstraResult;
 import com.railway.model.*;
 import com.railway.service.AuthService;
+import com.railway.service.EnvConfig;
 import com.railway.service.RailwayNetworkService;
 import com.railway.service.ReservationService;
 import com.railway.service.TrainService;
@@ -16,10 +17,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Built-in zero-dependency HTTP server and visual web dashboard.
@@ -32,6 +43,60 @@ public class EmbeddedWebServer {
     private final ReservationService reservationService;
     private final AuthService authService;
     private HttpServer server;
+
+    // Dynamic Stochastic Real-Time Train Delay Engine
+    public static class TrainDelayInfo {
+        public final String trainId;
+        public final int delayMinutes;
+        public final String reason;
+        public final long expiresAt;
+
+        public TrainDelayInfo(String trainId, int delayMinutes, String reason, long expiresAt) {
+            this.trainId = trainId;
+            this.delayMinutes = delayMinutes;
+            this.reason = reason;
+            this.expiresAt = expiresAt;
+        }
+    }
+
+    private final Map<String, TrainDelayInfo> activeDynamicDelays = new ConcurrentHashMap<>();
+    private volatile long lastDynamicDelaySelection = 0;
+    private final Random delayRandom = new Random();
+    private static final String[] DELAY_REASONS = {
+        "Signal Clearance Hold at Outer Cabin",
+        "Track Maintenance Caution & Speed Restriction",
+        "Precedence Crossing for Superfast Vande Bharat",
+        "Locomotive Traction Motor Diagnostic Check",
+        "Dense Fog / Restricted Corridor Visibility",
+        "Overhead Equipment (OHE) Voltage Inspection",
+        "Platform Turnaround & Shunting Clearance Delay"
+    };
+
+    public synchronized List<TrainDelayInfo> triggerMultipleTrainDelays(int count) {
+        List<Train> all = new ArrayList<>(trainService.getAllTrains());
+        if (all.isEmpty()) return Collections.emptyList();
+
+        // Shuffle to randomly select distinct express trains
+        Collections.shuffle(all, delayRandom);
+        int toDelay = Math.min(Math.max(1, count), all.size());
+        List<TrainDelayInfo> delayedList = new ArrayList<>();
+
+        for (int i = 0; i < toDelay; i++) {
+            Train target = all.get(i);
+            int delayMin = 14 + delayRandom.nextInt(46); // 14 to 59 minutes
+            String reason = DELAY_REASONS[delayRandom.nextInt(DELAY_REASONS.length)];
+            long expiresAt = System.currentTimeMillis() + (85 * 1000) + delayRandom.nextInt(40 * 1000); // Active 85-125s
+            TrainDelayInfo info = new TrainDelayInfo(target.getId(), delayMin, reason, expiresAt);
+            activeDynamicDelays.put(target.getId(), info);
+            delayedList.add(info);
+        }
+        return delayedList;
+    }
+
+    public synchronized TrainDelayInfo triggerRandomTrainDelay() {
+        List<TrainDelayInfo> list = triggerMultipleTrainDelays(1);
+        return list.isEmpty() ? null : list.get(0);
+    }
 
     public EmbeddedWebServer(int port,
                              RailwayNetworkService networkService,
@@ -52,6 +117,36 @@ public class EmbeddedWebServer {
         this(port, networkService, trainService, reservationService, new AuthService());
     }
 
+    private final ScheduledExecutorService autoSimulator = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "Railway-Auto-Simulator");
+        t.setDaemon(true);
+        return t;
+    });
+
+    private void startAutoSimulation() {
+        // Run every 4 seconds: automatically fluctuates confirmed seats & waitlists
+        autoSimulator.scheduleAtFixedRate(() -> {
+            try {
+                trainService.fluctuateAllTrainInventories();
+            } catch (Exception ignored) {}
+        }, 3, 4, TimeUnit.SECONDS);
+
+        // Run every 18 seconds: periodically simulates realistic active express route delays & recoveries
+        autoSimulator.scheduleAtFixedRate(() -> {
+            try {
+                int delayedCount = 2 + delayRandom.nextInt(3); // 2 to 4 trains
+                triggerMultipleTrainDelays(delayedCount);
+            } catch (Exception ignored) {}
+        }, 10, 18, TimeUnit.SECONDS);
+
+        // Run every 45 seconds: periodic dynamic demand cycle refresh across trains
+        autoSimulator.scheduleAtFixedRate(() -> {
+            try {
+                trainService.randomizeAllTrainInventories();
+            } catch (Exception ignored) {}
+        }, 45, 45, TimeUnit.SECONDS);
+    }
+
     public void start() {
         try {
             server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -68,20 +163,39 @@ public class EmbeddedWebServer {
             server.createContext("/api/auth/login", new AuthLoginApiHandler());
             server.createContext("/api/auth/logout", new AuthLogoutApiHandler());
             server.createContext("/api/auth/me", new AuthMeApiHandler());
+            server.createContext("/api/auth/profile/update", new AuthUpdateProfileApiHandler());
+            server.createContext("/api/auth/password/change", new AuthChangePasswordApiHandler());
             server.createContext("/api/auth/my-bookings", new AuthMyBookingsApiHandler());
+            server.createContext("/api/auth/google/config", new AuthGoogleConfigApiHandler());
+            server.createContext("/api/auth/google/login", new AuthGoogleLoginApiHandler());
+            server.createContext("/api/auth/google/callback", new AuthGoogleCallbackApiHandler());
             server.createContext("/api/auth/google", new AuthGoogleApiHandler());
             server.createContext("/api/admin/add-station", new AddStationApiHandler());
             server.createContext("/api/admin/add-track", new AddTrackApiHandler());
             server.createContext("/api/admin/add-train", new AddTrainApiHandler());
+            server.createContext("/api/admin/overview", new AdminOverviewApiHandler());
+            server.createContext("/api/admin/bookings", new AdminBookingsApiHandler());
+            server.createContext("/api/admin/users", new AdminUsersApiHandler());
+            server.createContext("/api/live-tracking", new AdminLiveTrackingApiHandler());
+            server.createContext("/api/simulate-delay", new SimulateDelayApiHandler());
+            server.createContext("/api/simulate-seat-flux", new SimulateSeatFluxApiHandler());
+            server.createContext("/api/randomize-inventory", new SimulateSeatFluxApiHandler());
 
-            server.setExecutor(null); // Default single-thread executor
+            // Java 21 Virtual Threads per task: scales to 10,000+ simultaneous requests seamlessly
+            server.setExecutor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
             server.start();
+
+            // Start automated 24/7 background passenger flow & inventory fluctuation simulation
+            startAutoSimulation();
         } catch (IOException e) {
             System.err.println("Note: Web server could not bind to port " + port + ": " + e.getMessage());
         }
     }
 
     public void stop() {
+        if (autoSimulator != null) {
+            autoSimulator.shutdownNow();
+        }
         if (server != null) {
             server.stop(0);
         }
@@ -180,7 +294,9 @@ public class EmbeddedWebServer {
             StringBuilder json = new StringBuilder("[");
             for (int i = 0; i < stations.size(); i++) {
                 Station s = stations.get(i);
-                json.append(String.format("{\"id\":\"%s\",\"name\":\"%s\"}", s.getId(), s.getName()));
+                json.append(String.format("{\"id\":\"%s\",\"name\":\"%s\",\"state\":\"%s\",\"district\":\"%s\",\"zone\":\"%s\",\"x\":%.1f,\"y\":%.1f}",
+                        s.getId(), escapeJson(s.getName()), escapeJson(s.getState()), escapeJson(s.getDistrict()),
+                        escapeJson(s.getZone()), s.getMapX(), s.getMapY()));
                 if (i < stations.size() - 1) json.append(",");
             }
             json.append("]");
@@ -191,7 +307,27 @@ public class EmbeddedWebServer {
     private class TrainsApiHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            List<Train> trains = trainService.getAllTrainsSortedByAvailableSeats();
+            Map<String, String> query = parseQueryParams(exchange.getRequestURI().getQuery());
+            String src = query.get("src");
+            String dst = query.get("dst");
+
+            List<Train> trains;
+            if (src != null && dst != null && !src.trim().isEmpty() && !dst.trim().isEmpty()) {
+                trains = trainService.searchTrains(src.trim(), dst.trim());
+                if (trains.isEmpty()) {
+                    Station sSrc = networkService.getStation(src.trim());
+                    Station sDst = networkService.getStation(dst.trim());
+                    if (sSrc != null && sDst != null) {
+                        Train corridorTrain = trainService.findOrCreateCorridorTrain(sSrc, sDst);
+                        if (corridorTrain != null) {
+                            trains = Collections.singletonList(corridorTrain);
+                        }
+                    }
+                }
+            } else {
+                trains = trainService.getAllTrainsSortedByAvailableSeats();
+            }
+
             StringBuilder json = new StringBuilder("[");
             for (int i = 0; i < trains.size(); i++) {
                 Train t = trains.get(i);
@@ -204,10 +340,15 @@ public class EmbeddedWebServer {
                 stopsJson.append("]");
 
                 json.append(String.format(
-                        "{\"id\":\"%s\",\"name\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"total\":%d,\"available\":%d,\"waitlist\":%d,\"farePerKm\":%.2f,\"stops\":%s}",
-                        t.getId(), t.getName(), t.getSource().getId(), t.getDestination().getId(),
-                        t.getTotalSeats(), t.getAvailableSeats(), t.getWaitingListCount(), t.getFarePerKm(),
-                        stopsJson.toString()
+                        "{\"id\":\"%s\",\"name\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"total\":%d,\"available\":%d,\"waitlist\":%d,\"rac\":%d,\"availableRac\":%d,\"emergency\":%d,\"departureTime\":\"%s\",\"arrivalTime\":\"%s\",\"duration\":\"%s\",\"farePerKm\":%.2f,\"stops\":%s,\"seatsByClass\":{\"1A\":%d,\"2A\":%d,\"3A\":%d,\"SL\":%d,\"GN\":%d},\"availableByClass\":{\"1A\":%d,\"2A\":%d,\"3A\":%d,\"SL\":%d,\"GN\":%d}}",
+                        t.getId(), escapeJson(t.getName()), t.getSource().getId(), t.getDestination().getId(),
+                        t.getTotalSeats(), t.getAvailableSeats(), t.getWaitingListCount(),
+                        t.getRacSeats(), t.getAvailableRacSeats(), t.getEmergencySeats(),
+                        escapeJson(t.getDepartureTime()), escapeJson(t.getArrivalTime()), escapeJson(t.getTravelDuration()),
+                        t.getFarePerKm(),
+                        stopsJson.toString(),
+                        t.getSeats1A(), t.getSeats2A(), t.getSeats3A(), t.getSeatsSL(), t.getSeatsGN(),
+                        t.getAvailableSeats1A(), t.getAvailableSeats2A(), t.getAvailableSeats3A(), t.getAvailableSeatsSL(), t.getAvailableSeatsGN()
                 ));
                 if (i < trains.size() - 1) json.append(",");
             }
@@ -247,6 +388,33 @@ public class EmbeddedWebServer {
         }
     }
 
+    private static String formatSeatsJson(Reservation res) {
+        if (res.isGeneralClass()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        List<Integer> seats = res.getSeatNumbers();
+        for (int i = 0; i < seats.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(seats.get(i));
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String formatPassengersJson(Reservation res) {
+        StringBuilder sb = new StringBuilder("[");
+        List<Passenger> plist = res.getPassengers();
+        for (int i = 0; i < plist.size(); i++) {
+            Passenger p = plist.get(i);
+            if (i > 0) sb.append(",");
+            sb.append(String.format("{\"name\":\"%s\",\"age\":%d,\"gender\":\"%s\"}",
+                    escapeJson(p.getName()), p.getAge(), escapeJson(p.getGender())));
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     private class PnrApiHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
@@ -263,12 +431,23 @@ public class EmbeddedWebServer {
                 return;
             }
 
+            DijkstraResult<Station> dr = networkService.findShortestRoute(res.getSourceStation().getId(), res.getDestinationStation().getId());
+            double dist = (dr != null && dr.isReachable()) ? dr.getTotalDistance() : 0.0;
+            String txnId = "TXN-RAIL-" + Math.abs((res.getPnr() + res.getTrainId()).hashCode() % 900000 + 100000);
+
             String json = String.format(
-                    "{\"found\":true,\"pnr\":\"%s\",\"passenger\":\"%s\",\"train\":\"%s (%s)\",\"from\":\"%s\",\"to\":\"%s\",\"status\":\"%s\",\"seat\":%d,\"wl\":%d,\"fare\":%.2f,\"travelClass\":\"%s\"}",
-                    res.getPnr(), res.getPassenger().getName(), res.getTrainName(), res.getTrainId(),
-                    res.getSourceStation().getName(), res.getDestinationStation().getName(),
-                    res.getStatus().name(), res.getSeatNumber(), res.getWaitingListNumber(), res.getFare(),
-                    res.getTravelClass()
+                    "{\"found\":true,\"pnr\":\"%s\",\"passenger\":\"%s\",\"age\":%d,\"gender\":\"%s\",\"seatCount\":%d,\"seats\":%s,\"seatsDisplay\":\"%s\",\"passengers\":%s,\"train\":\"%s (%s)\",\"trainId\":\"%s\",\"trainName\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"fromName\":\"%s\",\"toName\":\"%s\",\"status\":\"%s\",\"seat\":%d,\"wl\":%d,\"rac\":%d,\"quota\":\"%s\",\"departureTime\":\"%s\",\"arrivalTime\":\"%s\",\"fare\":%.2f,\"refundAmount\":%.2f,\"travelClass\":\"%s\",\"bookingTime\":\"%s\",\"travelDate\":\"%s\",\"formattedTravelDate\":\"%s\",\"distance\":%.1f,\"txnId\":\"%s\"}",
+                    res.getPnr(), escapeJson(res.getPassenger().getName()), res.getPassenger().getAge(), escapeJson(res.getPassenger().getGender()),
+                    res.getSeatCount(), formatSeatsJson(res), escapeJson(res.getSeatNumbersDisplay()), formatPassengersJson(res),
+                    escapeJson(res.getTrainName()), res.getTrainId(), res.getTrainId(), escapeJson(res.getTrainName()),
+                    res.getSourceStation().getId(), res.getDestinationStation().getId(),
+                    escapeJson(res.getSourceStation().getName()), escapeJson(res.getDestinationStation().getName()),
+                    res.getStatus().name(), res.getSeatNumber(), res.getWaitingListNumber(), res.getRacNumber(),
+                    escapeJson(res.getQuota()), escapeJson(res.getDepartureTime()), escapeJson(res.getArrivalTime()),
+                    res.getFare(), res.getRefundAmount(),
+                    escapeJson(res.getTravelClass()), res.getFormattedBookingTime(),
+                    escapeJson(res.getTravelDate()), escapeJson(res.getFormattedTravelDate()),
+                    dist, txnId
             );
             sendJsonResponse(exchange, json);
         }
@@ -291,6 +470,15 @@ public class EmbeddedWebServer {
             String src = params.get("src");
             String dst = params.get("dst");
             String travelClass = params.get("travelClass");
+            String quota = params.get("quota");
+
+            String seatCountStr = params.get("seatCount");
+            int seatCount = 1;
+            if (seatCountStr != null && !seatCountStr.trim().isEmpty()) {
+                try {
+                    seatCount = Math.max(1, Math.min(6, Integer.parseInt(seatCountStr.trim())));
+                } catch (NumberFormatException ignored) {}
+            }
 
             // Extract user from token or parameter
             String token = params.get("token");
@@ -318,14 +506,53 @@ public class EmbeddedWebServer {
                     if (dst == null || dst.trim().isEmpty()) dst = t.getDestination().getId();
                 }
                 int age = (ageStr != null && !ageStr.isEmpty()) ? Integer.parseInt(ageStr) : 25;
-                Reservation res = reservationService.bookTicket(trainId, name, age, gender, "WEB-" + System.currentTimeMillis() % 10000, src, dst, travelClass, bookedByUsername);
+                if (gender == null || gender.trim().isEmpty()) gender = "M";
+
+                // Build multi-passenger manifest
+                List<Passenger> passengerList = new ArrayList<>();
+                for (int i = 0; i < seatCount; i++) {
+                    String pName = params.get("name_" + i);
+                    String pAge = params.get("age_" + i);
+                    String pGen = params.get("gender_" + i);
+                    if (pName != null && !pName.trim().isEmpty()) {
+                        int a = age;
+                        try { if (pAge != null && !pAge.trim().isEmpty()) a = Integer.parseInt(pAge.trim()); } catch (Exception ignored) {}
+                        String g = (pGen != null && !pGen.trim().isEmpty()) ? pGen.trim().toUpperCase() : gender;
+                        passengerList.add(new Passenger("WEB-" + (System.currentTimeMillis() + i) % 100000, pName.trim(), a, g));
+                    }
+                }
+                if (passengerList.isEmpty()) {
+                    passengerList.add(new Passenger("WEB-" + System.currentTimeMillis() % 100000, name, age, gender));
+                    for (int i = 2; i <= seatCount; i++) {
+                        passengerList.add(new Passenger("WEB-" + (System.currentTimeMillis() + i) % 100000, name + " (Guest " + i + ")", age, gender));
+                    }
+                }
+
+                String travelDate = params.get("travelDate");
+                if (travelDate == null || travelDate.trim().isEmpty()) {
+                    travelDate = params.get("date");
+                }
+
+                Reservation res = reservationService.bookTickets(trainId, passengerList, src, dst, travelClass, bookedByUsername, quota, travelDate);
+                DijkstraResult<Station> dr = networkService.findShortestRoute(res.getSourceStation().getId(), res.getDestinationStation().getId());
+                double dist = (dr != null && dr.isReachable()) ? dr.getTotalDistance() : 0.0;
+                String txnId = "TXN-RAIL-" + Math.abs((res.getPnr() + res.getTrainId()).hashCode() % 900000 + 100000);
+
                 String json = String.format(
-                        "{\"success\":true,\"pnr\":\"%s\",\"status\":\"%s\",\"seat\":%d,\"wl\":%d,\"fare\":%.2f,\"passenger\":\"%s\",\"trainId\":\"%s\",\"trainName\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"travelClass\":\"%s\",\"bookedBy\":\"%s\"}",
-                        res.getPnr(), res.getStatus().name(), res.getSeatNumber(), res.getWaitingListNumber(), res.getFare(),
-                        escapeJson(res.getPassenger().getName()), res.getTrainId(), escapeJson(res.getTrainName()),
+                        "{\"success\":true,\"pnr\":\"%s\",\"status\":\"%s\",\"seat\":%d,\"seatCount\":%d,\"seats\":%s,\"seatsDisplay\":\"%s\",\"passengers\":%s,\"wl\":%d,\"rac\":%d,\"quota\":\"%s\",\"departureTime\":\"%s\",\"arrivalTime\":\"%s\",\"fare\":%.2f,\"passenger\":\"%s\",\"age\":%d,\"gender\":\"%s\",\"trainId\":\"%s\",\"trainName\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"fromName\":\"%s\",\"toName\":\"%s\",\"travelClass\":\"%s\",\"bookedBy\":\"%s\",\"bookingTime\":\"%s\",\"travelDate\":\"%s\",\"formattedTravelDate\":\"%s\",\"distance\":%.1f,\"txnId\":\"%s\"}",
+                        res.getPnr(), res.getStatus().name(), res.getSeatNumber(), res.getSeatCount(), formatSeatsJson(res), escapeJson(res.getSeatNumbersDisplay()), formatPassengersJson(res),
+                        res.getWaitingListNumber(), res.getRacNumber(),
+                        escapeJson(res.getQuota()), escapeJson(res.getDepartureTime()), escapeJson(res.getArrivalTime()),
+                        res.getFare(),
+                        escapeJson(res.getPassenger().getName()), res.getPassenger().getAge(), escapeJson(res.getPassenger().getGender()),
+                        res.getTrainId(), escapeJson(res.getTrainName()),
                         res.getSourceStation().getId(), res.getDestinationStation().getId(),
+                        escapeJson(res.getSourceStation().getName()), escapeJson(res.getDestinationStation().getName()),
                         escapeJson(res.getTravelClass()),
-                        res.getBookedByUsername() != null ? escapeJson(res.getBookedByUsername()) : ""
+                        res.getBookedByUsername() != null ? escapeJson(res.getBookedByUsername()) : "",
+                        res.getFormattedBookingTime(),
+                        escapeJson(res.getTravelDate()), escapeJson(res.getFormattedTravelDate()),
+                        dist, txnId
                 );
                 sendJsonResponse(exchange, json);
             } catch (Exception e) {
@@ -347,9 +574,17 @@ public class EmbeddedWebServer {
 
             ReservationService.CancellationResult result = reservationService.cancelTicket(pnr);
             String promotedPnr = result.getPromotedReservation() != null ? result.getPromotedReservation().getPnr() : "";
+            Reservation res = result.getCancelledReservation();
+            String trainName = res != null ? res.getTrainName() : "";
+            String trainId = res != null ? res.getTrainId() : "";
+            String passengerName = res != null && res.getPassenger() != null ? res.getPassenger().getName() : "";
+            double originalFare = res != null ? res.getFare() : (result.getRefundAmount() + result.getCancellationCharge());
+
             String json = String.format(
-                    "{\"success\":%b,\"message\":\"%s\",\"promotedPnr\":\"%s\"}",
-                    result.isSuccess(), escapeJson(result.message()), promotedPnr
+                    "{\"success\":%b,\"message\":\"%s\",\"promotedPnr\":\"%s\",\"refundAmount\":%.2f,\"cancellationCharge\":%.2f,\"refundTxnId\":\"%s\",\"originalFare\":%.2f,\"refundRatio\":\"80%%\",\"cancellationChargeRatio\":\"20%%\",\"pnr\":\"%s\",\"trainId\":\"%s\",\"trainName\":\"%s\",\"passengerName\":\"%s\"}",
+                    result.isSuccess(), escapeJson(result.message()), promotedPnr,
+                    result.getRefundAmount(), result.getCancellationCharge(), escapeJson(result.getRefundTxnId()),
+                    originalFare, escapeJson(pnr != null ? pnr : ""), escapeJson(trainId), escapeJson(trainName), escapeJson(passengerName)
             );
             sendJsonResponse(exchange, json);
         }
@@ -364,7 +599,9 @@ public class EmbeddedWebServer {
             StringBuilder json = new StringBuilder("{\"stations\":[");
             for (int i = 0; i < stations.size(); i++) {
                 Station s = stations.get(i);
-                json.append(String.format("{\"id\":\"%s\",\"name\":\"%s\"}", s.getId(), s.getName()));
+                json.append(String.format("{\"id\":\"%s\",\"name\":\"%s\",\"state\":\"%s\",\"district\":\"%s\",\"zone\":\"%s\",\"x\":%.1f,\"y\":%.1f}",
+                        s.getId(), escapeJson(s.getName()), escapeJson(s.getState()), escapeJson(s.getDistrict()),
+                        escapeJson(s.getZone()), s.getMapX(), s.getMapY()));
                 if (i < stations.size() - 1) json.append(",");
             }
             json.append("],\"tracks\":[");
@@ -477,6 +714,328 @@ public class EmbeddedWebServer {
         }
     }
 
+    private class AdminOverviewApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            List<Reservation> allRes = reservationService.getAllReservations();
+            int totalBookings = allRes.size();
+            int cnfCount = 0;
+            int wlCount = 0;
+            int racCount = 0;
+            int canCount = 0;
+            double totalRevenue = 0.0;
+
+            for (Reservation r : allRes) {
+                if (r.getStatus() == BookingStatus.CONFIRMED) {
+                    cnfCount++;
+                    totalRevenue += r.getFare();
+                } else if (r.getStatus() == BookingStatus.RAC) {
+                    racCount++;
+                    totalRevenue += r.getFare();
+                } else if (r.getStatus() == BookingStatus.WAITING_LIST) {
+                    wlCount++;
+                    totalRevenue += r.getFare();
+                } else if (r.getStatus() == BookingStatus.CANCELLED) {
+                    canCount++;
+                    totalRevenue += Math.max(0, r.getFare() - r.getRefundAmount());
+                }
+            }
+
+            List<User> users = authService.getAllUsers();
+            int totalUsers = users.size();
+            int passengerCount = 0;
+            int adminCount = 0;
+            int googleCount = 0;
+            for (User u : users) {
+                if (u.getRole() == UserRole.ADMIN) adminCount++;
+                else passengerCount++;
+                if ("google".equalsIgnoreCase(u.getAuthProvider())) googleCount++;
+            }
+
+            int stationsCount = networkService.getAllStations().size();
+            List<Train> trains = trainService.getAllTrains();
+            int trainsCount = trains.size();
+            int totalSeats = 0;
+            int availableSeats = 0;
+            int totalWaitlist = 0;
+            for (Train t : trains) {
+                totalSeats += t.getTotalSeats();
+                availableSeats += t.getAvailableSeats();
+                totalWaitlist += t.getWaitingListCount();
+            }
+
+            double totalTrackKm = 0;
+            for (RouteEdge e : networkService.getAllTracks()) {
+                totalTrackKm += e.getDistanceKm();
+            }
+
+            String json = String.format(
+                    "{\"success\":true,\"totalBookings\":%d,\"cnfBookings\":%d,\"wlBookings\":%d,\"racBookings\":%d,\"cancelledBookings\":%d,\"totalRevenue\":%.2f,\"totalUsers\":%d,\"passengerCount\":%d,\"adminCount\":%d,\"googleCount\":%d,\"stations\":%d,\"trains\":%d,\"totalSeats\":%d,\"availableSeats\":%d,\"waitlist\":%d,\"totalTrackKm\":%.1f}",
+                    totalBookings, cnfCount, wlCount, racCount, canCount, totalRevenue,
+                    totalUsers, passengerCount, adminCount, googleCount,
+                    stationsCount, trainsCount, totalSeats, availableSeats, totalWaitlist, totalTrackKm
+            );
+            sendJsonResponse(exchange, json);
+        }
+    }
+
+    private class AdminBookingsApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            List<Reservation> allRes = reservationService.getAllReservations();
+            StringBuilder sb = new StringBuilder("{\"success\":true,\"total\":").append(allRes.size()).append(",\"bookings\":[");
+            for (int i = 0; i < allRes.size(); i++) {
+                Reservation r = allRes.get(i);
+                if (i > 0) sb.append(",");
+                DijkstraResult<Station> dr = networkService.findShortestRoute(r.getSourceStation().getId(), r.getDestinationStation().getId());
+                double dist = (dr != null && dr.isReachable()) ? dr.getTotalDistance() : 0.0;
+                String txnId = "TXN-RAIL-" + Math.abs((r.getPnr() + r.getTrainId()).hashCode() % 900000 + 100000);
+                sb.append(String.format(
+                        "{\"pnr\":\"%s\",\"passenger\":\"%s\",\"age\":%d,\"gender\":\"%s\",\"seatCount\":%d,\"seats\":%s,\"seatsDisplay\":\"%s\",\"passengers\":%s,\"trainId\":\"%s\",\"trainName\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"fromName\":\"%s\",\"toName\":\"%s\",\"travelClass\":\"%s\",\"seat\":%d,\"wl\":%d,\"rac\":%d,\"quota\":\"%s\",\"departureTime\":\"%s\",\"arrivalTime\":\"%s\",\"fare\":%.2f,\"refundAmount\":%.2f,\"status\":\"%s\",\"bookingTime\":\"%s\",\"travelDate\":\"%s\",\"formattedTravelDate\":\"%s\",\"bookedBy\":\"%s\",\"distance\":%.1f,\"txnId\":\"%s\"}",
+                        r.getPnr(), escapeJson(r.getPassenger().getName()), r.getPassenger().getAge(), escapeJson(r.getPassenger().getGender()),
+                        r.getSeatCount(), formatSeatsJson(r), escapeJson(r.getSeatNumbersDisplay()), formatPassengersJson(r),
+                        r.getTrainId(), escapeJson(r.getTrainName()),
+                        r.getSourceStation().getId(), r.getDestinationStation().getId(),
+                        escapeJson(r.getSourceStation().getName()), escapeJson(r.getDestinationStation().getName()),
+                        escapeJson(r.getTravelClass()), r.getSeatNumber(), r.getWaitingListNumber(), r.getRacNumber(),
+                        escapeJson(r.getQuota()), escapeJson(r.getDepartureTime()), escapeJson(r.getArrivalTime()),
+                        r.getFare(), r.getRefundAmount(),
+                        r.getStatus().name(), r.getFormattedBookingTime(),
+                        escapeJson(r.getTravelDate()), escapeJson(r.getFormattedTravelDate()),
+                        r.getBookedByUsername() != null ? escapeJson(r.getBookedByUsername()) : "",
+                        dist, txnId
+                ));
+            }
+            sb.append("]}");
+            sendJsonResponse(exchange, sb.toString());
+        }
+    }
+
+    private class AdminUsersApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            List<User> users = authService.getAllUsers();
+            StringBuilder sb = new StringBuilder("{\"success\":true,\"total\":").append(users.size()).append(",\"users\":[");
+            for (int i = 0; i < users.size(); i++) {
+                User u = users.get(i);
+                if (i > 0) sb.append(",");
+                int bookingCount = reservationService.getReservationsByUsername(u.getUsername()).size();
+                sb.append(String.format(
+                        "{\"username\":\"%s\",\"fullName\":\"%s\",\"email\":\"%s\",\"phone\":\"%s\",\"role\":\"%s\",\"authProvider\":\"%s\",\"avatarUrl\":\"%s\",\"bookingCount\":%d}",
+                        escapeJson(u.getUsername()), escapeJson(u.getFullName()),
+                        escapeJson(u.getEmail()), escapeJson(u.getPhone()),
+                        u.getRole().name(),
+                        escapeJson(u.getAuthProvider()), escapeJson(u.getAvatarUrl()),
+                        bookingCount
+                ));
+            }
+            sb.append("]}");
+            sendJsonResponse(exchange, sb.toString());
+        }
+    }
+
+    private class AdminLiveTrackingApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            Map<String, String> query = parseQueryParams(exchange.getRequestURI().getQuery());
+            String filterState = query.get("state");
+            if (filterState != null && (filterState.trim().equalsIgnoreCase("all") || filterState.trim().isEmpty())) {
+                filterState = null;
+            } else if (filterState != null) {
+                filterState = filterState.trim().toLowerCase();
+            }
+
+            List<Train> allTrains = trainService.getAllTrains();
+            long now = System.currentTimeMillis();
+
+            // Auto-rotate stochastic train delays (guarantees multiple delayed trains dynamically across the network)
+            activeDynamicDelays.values().removeIf(d -> now > d.expiresAt);
+            if (activeDynamicDelays.size() < 3 || (now - lastDynamicDelaySelection > 25000)) {
+                triggerMultipleTrainDelays(3 + delayRandom.nextInt(3)); // 3 to 5 delayed trains
+                lastDynamicDelaySelection = now;
+            }
+
+            StringBuilder sb = new StringBuilder("{\"success\":true,\"timestamp\":").append(now).append(",\"trains\":[");
+
+            boolean first = true;
+            for (Train t : allTrains) {
+                List<Station> stops = t.getRouteStops();
+                if (stops == null || stops.isEmpty()) {
+                    stops = Arrays.asList(t.getSource(), t.getDestination());
+                }
+
+                Set<String> statesTraversed = new LinkedHashSet<>();
+                for (Station s : stops) {
+                    if (s.getState() != null && !s.getState().isEmpty()) {
+                        statesTraversed.add(s.getState());
+                    }
+                }
+
+                boolean matchesState = true;
+                if (filterState != null) {
+                    matchesState = false;
+                    for (String st : statesTraversed) {
+                        if (st.toLowerCase().contains(filterState)) {
+                            matchesState = true;
+                            break;
+                        }
+                    }
+                }
+
+                int trainHash = Math.abs(t.getId().hashCode());
+                int cycleSeconds = 90 + (trainHash % 60);
+                double rawTime = (now / 1000.0) + (trainHash % 1000);
+                double totalProgress = (rawTime % cycleSeconds) / (double) cycleSeconds;
+
+                int numSegments = Math.max(1, stops.size() - 1);
+                double segmentFraction = 1.0 / numSegments;
+                int currentSegIdx = Math.min(numSegments - 1, (int) (totalProgress / segmentFraction));
+                double segProgress = (totalProgress - (currentSegIdx * segmentFraction)) / segmentFraction;
+
+                Station curFrom = stops.get(currentSegIdx);
+                Station curTo = stops.get(currentSegIdx + 1);
+
+                double curX = curFrom.getMapX() + (curTo.getMapX() - curFrom.getMapX()) * segProgress;
+                double curY = curFrom.getMapY() + (curTo.getMapY() - curFrom.getMapY()) * segProgress;
+
+                int baseSpeed = t.getName().contains("Rajdhani") ? 130 : (t.getName().contains("Vande Bharat") ? 140 : (t.getName().contains("Shatabdi") ? 125 : 105));
+
+                TrainDelayInfo delayInfo = activeDynamicDelays.get(t.getId());
+                int delayMin = 0;
+                String delayReason = "On Time - Track Clear";
+                boolean isDelayed = false;
+                if (delayInfo != null) {
+                    delayMin = delayInfo.delayMinutes;
+                    delayReason = delayInfo.reason;
+                    isDelayed = true;
+                }
+
+                int liveSpeed = isDelayed ? Math.max(45, (int) (baseSpeed * 0.65)) : (baseSpeed + (int) ((Math.sin(rawTime / 5.0) * 10)));
+                String delayStatus = !isDelayed ? "On Time" : ("Delayed " + delayMin + "m (" + delayReason + ")");
+                int etaMin = Math.max(2, (int) ((1.0 - segProgress) * 45)) + delayMin;
+
+                String activeState = (segProgress < 0.5) ? curFrom.getState() : curTo.getState();
+
+                if (!first) sb.append(",");
+                first = false;
+
+                StringBuilder statesJson = new StringBuilder("[");
+                int sIdx = 0;
+                for (String st : statesTraversed) {
+                    if (sIdx > 0) statesJson.append(",");
+                    statesJson.append("\"").append(escapeJson(st)).append("\"");
+                    sIdx++;
+                }
+                statesJson.append("]");
+
+                sb.append(String.format(
+                        "{\"id\":\"%s\",\"name\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"fromName\":\"%s\",\"toName\":\"%s\",\"currentFrom\":\"%s\",\"currentFromName\":\"%s\",\"currentTo\":\"%s\",\"currentToName\":\"%s\",\"activeState\":\"%s\",\"states\":%s,\"x\":%.2f,\"y\":%.2f,\"progress\":%.3f,\"segProgress\":%.3f,\"speed\":%d,\"delayMinutes\":%d,\"delayReason\":\"%s\",\"isDelayed\":%b,\"delayStatus\":\"%s\",\"nextStop\":\"%s\",\"etaMinutes\":%d,\"totalSeats\":%d,\"availableSeats\":%d,\"bookedSeats\":%d,\"occupancyPercent\":%.1f,\"waitlist\":%d,\"matchesFilter\":%b}",
+                        t.getId(), escapeJson(t.getName()),
+                        t.getSource().getId(), t.getDestination().getId(),
+                        escapeJson(t.getSource().getName()), escapeJson(t.getDestination().getName()),
+                        curFrom.getId(), escapeJson(curFrom.getName()),
+                        curTo.getId(), escapeJson(curTo.getName()),
+                        escapeJson(activeState), statesJson.toString(),
+                        curX, curY, totalProgress, segProgress,
+                        liveSpeed, delayMin, escapeJson(delayReason), isDelayed, escapeJson(delayStatus),
+                        escapeJson(curTo.getName()), etaMin,
+                        t.getTotalSeats(), t.getAvailableSeats(),
+                        (t.getTotalSeats() - t.getAvailableSeats()),
+                        ((t.getTotalSeats() - t.getAvailableSeats()) * 100.0 / Math.max(1, t.getTotalSeats())),
+                        t.getWaitingListCount(),
+                        matchesState
+                ));
+            }
+            sb.append("]}");
+            sendJsonResponse(exchange, sb.toString());
+        }
+    }
+
+    private class SimulateDelayApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            int count = 3 + delayRandom.nextInt(3); // 3 to 5 trains
+            Map<String, String> q = parseQueryParams(exchange.getRequestURI().getQuery());
+            if (q.containsKey("count")) {
+                try {
+                    count = Math.max(2, Integer.parseInt(q.get("count")));
+                } catch (Exception ignored) {}
+            }
+            List<TrainDelayInfo> list = triggerMultipleTrainDelays(count);
+            if (list.isEmpty()) {
+                sendJsonResponse(exchange, "{\"success\":false,\"message\":\"No trains available\"}");
+                return;
+            }
+
+            StringBuilder arrJson = new StringBuilder("[");
+            StringBuilder summarySb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                TrainDelayInfo info = list.get(i);
+                Train t = trainService.getTrain(info.trainId);
+                String name = (t != null) ? t.getName() : info.trainId;
+                if (i > 0) {
+                    arrJson.append(",");
+                    summarySb.append(", ");
+                }
+                arrJson.append(String.format(
+                        "{\"trainId\":\"%s\",\"trainName\":\"%s\",\"delayMinutes\":%d,\"reason\":\"%s\"}",
+                        info.trainId, escapeJson(name), info.delayMinutes, escapeJson(info.reason)
+                ));
+                summarySb.append("#").append(info.trainId).append(" (+").append(info.delayMinutes).append("m)");
+            }
+            arrJson.append("]");
+
+            TrainDelayInfo first = list.get(0);
+            Train t1 = trainService.getTrain(first.trainId);
+            String name1 = (t1 != null) ? t1.getName() : first.trainId;
+
+            String msg = String.format("Stochastic algorithm delayed %d express trains: %s", list.size(), summarySb.toString());
+            String json = String.format(
+                    "{\"success\":true,\"count\":%d,\"trains\":%s,\"trainId\":\"%s\",\"trainName\":\"%s\",\"delayMinutes\":%d,\"reason\":\"%s\",\"message\":\"%s\"}",
+                    list.size(), arrJson.toString(),
+                    first.trainId, escapeJson(name1), first.delayMinutes, escapeJson(first.reason),
+                    escapeJson(msg)
+            );
+            sendJsonResponse(exchange, json);
+        }
+    }
+
+    private class SimulateSeatFluxApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            Map<String, String> q = parseQueryParams(exchange.getRequestURI().getQuery());
+            String mode = q.getOrDefault("mode", "randomize");
+            if ("fluctuate".equalsIgnoreCase(mode)) {
+                trainService.fluctuateAllTrainInventories();
+            } else {
+                trainService.randomizeAllTrainInventories();
+            }
+
+            List<Train> trains = trainService.getAllTrains();
+            StringBuilder arr = new StringBuilder("[");
+            int wlCount = 0;
+            int totalAvail = 0;
+            for (int i = 0; i < trains.size(); i++) {
+                Train t = trains.get(i);
+                totalAvail += t.getAvailableSeats();
+                wlCount += t.getWaitingListCount();
+                if (i > 0) arr.append(",");
+                arr.append(String.format(
+                        "{\"id\":\"%s\",\"name\":\"%s\",\"available\":%d,\"total\":%d,\"waitlist\":%d,\"rac\":%d,\"availableRac\":%d}",
+                        t.getId(), escapeJson(t.getName()), t.getAvailableSeats(), t.getTotalSeats(),
+                        t.getWaitingListCount(), t.getRacSeats(), t.getAvailableRacSeats()
+                ));
+            }
+            arr.append("]");
+
+            String msg = String.format("Seat inventory dynamically randomized across all %d trains. Total Confirmed Available: %d seats | Active Waiting List: %d passengers.",
+                    trains.size(), totalAvail, wlCount);
+            String json = String.format("{\"success\":true,\"mode\":\"%s\",\"totalAvailable\":%d,\"totalWaitlist\":%d,\"message\":\"%s\",\"trains\":%s}",
+                    escapeJson(mode), totalAvail, wlCount, escapeJson(msg), arr.toString());
+            sendJsonResponse(exchange, json);
+        }
+    }
+
     private class AuthRegisterApiHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
@@ -568,7 +1127,7 @@ public class EmbeddedWebServer {
         }
     }
 
-    private class AuthGoogleApiHandler implements HttpHandler {
+    private class AuthUpdateProfileApiHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -577,6 +1136,299 @@ public class EmbeddedWebServer {
             }
             String body = readRequestBody(exchange);
             Map<String, String> params = parseFormBody(body);
+            String token = params.getOrDefault("token", extractToken(exchange));
+            User user = authService.validateToken(token);
+            if (user == null) {
+                sendJsonResponse(exchange, "{\"success\":false,\"error\":\"Invalid or expired session\"}");
+                return;
+            }
+            String fullName = params.get("fullName");
+            String email = params.get("email");
+            String phone = params.get("phone");
+
+            boolean updated = authService.updateProfile(token, fullName, email, phone);
+            if (updated) {
+                int bookingCount = reservationService.getReservationsByUsername(user.getUsername()).size();
+                String json = String.format(
+                        "{\"success\":true,\"message\":\"Profile updated successfully\",\"user\":{\"username\":\"%s\",\"fullName\":\"%s\",\"email\":\"%s\",\"phone\":\"%s\",\"role\":\"%s\",\"authProvider\":\"%s\",\"avatarUrl\":\"%s\"},\"bookingCount\":%d}",
+                        escapeJson(user.getUsername()), escapeJson(user.getFullName()),
+                        escapeJson(user.getEmail()), escapeJson(user.getPhone()), user.getRole().name(),
+                        escapeJson(user.getAuthProvider()), escapeJson(user.getAvatarUrl()),
+                        bookingCount
+                );
+                sendJsonResponse(exchange, json);
+            } else {
+                sendJsonResponse(exchange, "{\"success\":false,\"error\":\"Failed to update profile\"}");
+            }
+        }
+    }
+
+    private class AuthChangePasswordApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJsonResponse(exchange, "{\"success\":false,\"error\":\"POST required\"}");
+                return;
+            }
+            String body = readRequestBody(exchange);
+            Map<String, String> params = parseFormBody(body);
+            String token = params.getOrDefault("token", extractToken(exchange));
+            String currentPassword = params.get("currentPassword");
+            String newPassword = params.get("newPassword");
+
+            try {
+                boolean changed = authService.changePassword(token, currentPassword, newPassword);
+                if (changed) {
+                    sendJsonResponse(exchange, "{\"success\":true,\"message\":\"Password updated successfully. Please use your new password next time you log in.\"}");
+                } else {
+                    sendJsonResponse(exchange, "{\"success\":false,\"error\":\"Invalid authentication session.\"}");
+                }
+            } catch (IllegalArgumentException e) {
+                sendJsonResponse(exchange, String.format("{\"success\":false,\"error\":\"%s\"}", escapeJson(e.getMessage())));
+            } catch (Exception e) {
+                sendJsonResponse(exchange, String.format("{\"success\":false,\"error\":\"Password update error: %s\"}", escapeJson(e.getMessage())));
+            }
+        }
+    }
+
+    public static class GoogleUserInfo {
+        public String email = "";
+        public String name = "";
+        public String sub = "";
+        public String picture = "";
+        public boolean emailVerified = false;
+    }
+
+    private GoogleUserInfo verifyGoogleIdToken(String idToken) {
+        if (idToken == null || idToken.trim().isEmpty()) {
+            return null;
+        }
+        idToken = idToken.trim();
+
+        // 1. Primary: Verify with Google's official tokeninfo endpoint
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6)).build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken))
+                    .timeout(Duration.ofSeconds(8))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                String json = response.body();
+                GoogleUserInfo info = new GoogleUserInfo();
+                info.email = extractJsonStringField(json, "email");
+                info.name = extractJsonStringField(json, "name");
+                info.sub = extractJsonStringField(json, "sub");
+                info.picture = extractJsonStringField(json, "picture");
+                String ev = extractJsonStringField(json, "email_verified");
+                info.emailVerified = "true".equalsIgnoreCase(ev) || json.contains("\"email_verified\":true") || json.contains("\"email_verified\": true");
+
+                if (info.email != null && !info.email.isEmpty()) {
+                    return info;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Note: Online Google tokeninfo lookup failed (" + e.getMessage() + "), using fallback decode.");
+        }
+
+        // 2. Fallback: Parse claims payload directly from JWT (header.payload.signature)
+        try {
+            String[] parts = idToken.split("\\.");
+            if (parts.length >= 2) {
+                byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
+                String payloadJson = new String(decoded, StandardCharsets.UTF_8);
+                GoogleUserInfo info = new GoogleUserInfo();
+                info.email = extractJsonStringField(payloadJson, "email");
+                info.name = extractJsonStringField(payloadJson, "name");
+                info.sub = extractJsonStringField(payloadJson, "sub");
+                info.picture = extractJsonStringField(payloadJson, "picture");
+                if (info.email != null && !info.email.isEmpty()) {
+                    return info;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Could not decode JWT payload: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    private GoogleUserInfo fetchGoogleUserInfoWithAccessToken(String accessToken) {
+        if (accessToken == null || accessToken.trim().isEmpty()) return null;
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6)).build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://www.googleapis.com/oauth2/v3/userinfo"))
+                    .header("Authorization", "Bearer " + accessToken.trim())
+                    .timeout(Duration.ofSeconds(8))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                String json = response.body();
+                GoogleUserInfo info = new GoogleUserInfo();
+                info.email = extractJsonStringField(json, "email");
+                info.name = extractJsonStringField(json, "name");
+                info.sub = extractJsonStringField(json, "sub");
+                info.picture = extractJsonStringField(json, "picture");
+                return info;
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching Google userinfo with access token: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static String extractJsonStringField(String json, String key) {
+        if (json == null || key == null) return "";
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*\"([^\"]*)\"");
+        java.util.regex.Matcher m = p.matcher(json);
+        if (m.find()) {
+            return m.group(1);
+        }
+        return "";
+    }
+
+    private class AuthGoogleConfigApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
+            boolean configured = EnvConfig.isGoogleConfigured();
+            String clientId = EnvConfig.getGoogleClientId();
+            String redirectUri = EnvConfig.getGoogleRedirectUri();
+            String json = String.format(
+                    "{\"success\":true,\"configured\":%b,\"clientId\":\"%s\",\"redirectUri\":\"%s\"}",
+                    configured, escapeJson(clientId), escapeJson(redirectUri)
+            );
+            sendJsonResponse(exchange, json);
+        }
+    }
+
+    private class AuthGoogleLoginApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!EnvConfig.isGoogleConfigured()) {
+                sendJsonResponse(exchange, "{\"success\":false,\"error\":\"Google OAuth is not configured in .env file yet. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.\"}");
+                return;
+            }
+            String clientId = EnvConfig.getGoogleClientId();
+            String redirectUri = EnvConfig.getGoogleRedirectUri();
+            String authUrl = "https://accounts.google.com/o/oauth2/v2/auth?"
+                    + "client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+                    + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
+                    + "&response_type=code"
+                    + "&scope=" + URLEncoder.encode("openid email profile", StandardCharsets.UTF_8)
+                    + "&access_type=offline"
+                    + "&prompt=select_account";
+
+            exchange.getResponseHeaders().set("Location", authUrl);
+            exchange.sendResponseHeaders(302, -1);
+        }
+    }
+
+    private class AuthGoogleCallbackApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            URI uri = exchange.getRequestURI();
+            String query = uri.getQuery();
+            Map<String, String> queryParams = query != null ? parseFormBody(query) : new HashMap<>();
+            String code = queryParams.get("code");
+            String error = queryParams.get("error");
+
+            if (error != null && !error.isEmpty()) {
+                exchange.getResponseHeaders().set("Location", "/?error=" + URLEncoder.encode("Google auth denied: " + error, StandardCharsets.UTF_8));
+                exchange.sendResponseHeaders(302, -1);
+                return;
+            }
+
+            if (code == null || code.isEmpty()) {
+                exchange.getResponseHeaders().set("Location", "/?error=" + URLEncoder.encode("Missing authorization code from Google", StandardCharsets.UTF_8));
+                exchange.sendResponseHeaders(302, -1);
+                return;
+            }
+
+            try {
+                String clientId = EnvConfig.getGoogleClientId();
+                String clientSecret = EnvConfig.getGoogleClientSecret();
+                String redirectUri = EnvConfig.getGoogleRedirectUri();
+
+                HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6)).build();
+                String tokenForm = "code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                        + "&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+                        + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
+                        + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
+                        + "&grant_type=authorization_code";
+
+                HttpRequest tokenReq = HttpRequest.newBuilder()
+                        .uri(URI.create("https://oauth2.googleapis.com/token"))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .timeout(Duration.ofSeconds(10))
+                        .POST(HttpRequest.BodyPublishers.ofString(tokenForm))
+                        .build();
+
+                HttpResponse<String> tokenResp = client.send(tokenReq, HttpResponse.BodyHandlers.ofString());
+                if (tokenResp.statusCode() != 200) {
+                    exchange.getResponseHeaders().set("Location", "/?error=" + URLEncoder.encode("Token exchange failed: " + tokenResp.body(), StandardCharsets.UTF_8));
+                    exchange.sendResponseHeaders(302, -1);
+                    return;
+                }
+
+                String tokenJson = tokenResp.body();
+                String idToken = extractJsonStringField(tokenJson, "id_token");
+                String accessToken = extractJsonStringField(tokenJson, "access_token");
+
+                GoogleUserInfo userInfo = null;
+                if (idToken != null && !idToken.isEmpty()) {
+                    userInfo = verifyGoogleIdToken(idToken);
+                }
+                if (userInfo == null && accessToken != null && !accessToken.isEmpty()) {
+                    userInfo = fetchGoogleUserInfoWithAccessToken(accessToken);
+                }
+
+                if (userInfo == null || userInfo.email == null || userInfo.email.isEmpty()) {
+                    exchange.getResponseHeaders().set("Location", "/?error=" + URLEncoder.encode("Could not retrieve Google profile", StandardCharsets.UTF_8));
+                    exchange.sendResponseHeaders(302, -1);
+                    return;
+                }
+
+                AuthSession session = authService.loginWithGoogle(userInfo.email, userInfo.name, userInfo.sub, userInfo.picture);
+                exchange.getResponseHeaders().set("Location", "/?token=" + session.getToken() + "&google_login=success");
+                exchange.sendResponseHeaders(302, -1);
+            } catch (Exception e) {
+                exchange.getResponseHeaders().set("Location", "/?error=" + URLEncoder.encode("Google OAuth error: " + e.getMessage(), StandardCharsets.UTF_8));
+                exchange.sendResponseHeaders(302, -1);
+            }
+        }
+    }
+
+    private class AuthGoogleApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "POST, OPTIONS");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJsonResponse(exchange, "{\"success\":false,\"error\":\"POST required\"}");
+                return;
+            }
+            String body = readRequestBody(exchange);
+            Map<String, String> params = parseFormBody(body);
+
+            String credential = params.get("credential");
+            if (credential == null || credential.isEmpty()) {
+                credential = params.get("id_token");
+            }
+            if (credential == null || credential.isEmpty()) {
+                credential = extractJsonStringField(body, "credential");
+            }
 
             String email = params.get("email");
             String name = params.get("name");
@@ -587,6 +1439,31 @@ public class EmbeddedWebServer {
             String avatarUrl = params.get("avatarUrl");
             if (avatarUrl == null || avatarUrl.isEmpty()) {
                 avatarUrl = params.get("picture");
+            }
+
+            // Verify Google ID Token (JWT)
+            if (credential != null && !credential.isEmpty()) {
+                GoogleUserInfo verifiedInfo = verifyGoogleIdToken(credential);
+                if (verifiedInfo != null && verifiedInfo.email != null && !verifiedInfo.email.isEmpty()) {
+                    email = verifiedInfo.email;
+                    if (verifiedInfo.name != null && !verifiedInfo.name.isEmpty()) {
+                        name = verifiedInfo.name;
+                    }
+                    if (verifiedInfo.sub != null && !verifiedInfo.sub.isEmpty()) {
+                        googleId = verifiedInfo.sub;
+                    }
+                    if (verifiedInfo.picture != null && !verifiedInfo.picture.isEmpty()) {
+                        avatarUrl = verifiedInfo.picture;
+                    }
+                } else if (email == null || email.isEmpty()) {
+                    sendJsonResponse(exchange, "{\"success\":false,\"error\":\"Invalid Google ID token credential\"}");
+                    return;
+                }
+            }
+
+            if (email == null || email.trim().isEmpty()) {
+                sendJsonResponse(exchange, "{\"success\":false,\"error\":\"Google authentication failed: Email is missing.\"}");
+                return;
             }
 
             try {
@@ -621,12 +1498,22 @@ public class EmbeddedWebServer {
             for (int i = 0; i < userBookings.size(); i++) {
                 Reservation r = userBookings.get(i);
                 if (i > 0) sb.append(",");
+                DijkstraResult<Station> dr = networkService.findShortestRoute(r.getSourceStation().getId(), r.getDestinationStation().getId());
+                double dist = (dr != null && dr.isReachable()) ? dr.getTotalDistance() : 0.0;
+                String txnId = "TXN-RAIL-" + Math.abs((r.getPnr() + r.getTrainId()).hashCode() % 900000 + 100000);
                 sb.append(String.format(
-                        "{\"pnr\":\"%s\",\"passenger\":\"%s\",\"trainId\":\"%s\",\"trainName\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"class\":\"%s\",\"seat\":%d,\"wl\":%d,\"fare\":%.2f,\"status\":\"%s\",\"date\":\"%s\"}",
-                        r.getPnr(), escapeJson(r.getPassenger().getName()), r.getTrainId(), escapeJson(r.getTrainName()),
+                        "{\"pnr\":\"%s\",\"passenger\":\"%s\",\"age\":%d,\"gender\":\"%s\",\"seatCount\":%d,\"seats\":%s,\"seatsDisplay\":\"%s\",\"passengers\":%s,\"trainId\":\"%s\",\"trainName\":\"%s\",\"from\":\"%s\",\"to\":\"%s\",\"fromName\":\"%s\",\"toName\":\"%s\",\"class\":\"%s\",\"seat\":%d,\"wl\":%d,\"rac\":%d,\"quota\":\"%s\",\"departureTime\":\"%s\",\"arrivalTime\":\"%s\",\"fare\":%.2f,\"refundAmount\":%.2f,\"status\":\"%s\",\"date\":\"%s\",\"travelDate\":\"%s\",\"formattedTravelDate\":\"%s\",\"distance\":%.1f,\"txnId\":\"%s\"}",
+                        r.getPnr(), escapeJson(r.getPassenger().getName()), r.getPassenger().getAge(), escapeJson(r.getPassenger().getGender()),
+                        r.getSeatCount(), formatSeatsJson(r), escapeJson(r.getSeatNumbersDisplay()), formatPassengersJson(r),
+                        r.getTrainId(), escapeJson(r.getTrainName()),
                         r.getSourceStation().getId(), r.getDestinationStation().getId(),
-                        escapeJson(r.getTravelClass()), r.getSeatNumber(), r.getWaitingListNumber(),
-                        r.getFare(), r.getStatus().name(), r.getFormattedBookingTime()
+                        escapeJson(r.getSourceStation().getName()), escapeJson(r.getDestinationStation().getName()),
+                        escapeJson(r.getTravelClass()), r.getSeatNumber(), r.getWaitingListNumber(), r.getRacNumber(),
+                        escapeJson(r.getQuota()), escapeJson(r.getDepartureTime()), escapeJson(r.getArrivalTime()),
+                        r.getFare(), r.getRefundAmount(),
+                        r.getStatus().name(), r.getFormattedBookingTime(),
+                        escapeJson(r.getTravelDate()), escapeJson(r.getFormattedTravelDate()),
+                        dist, txnId
                 ));
             }
             sb.append("]}");

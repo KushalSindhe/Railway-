@@ -182,4 +182,38 @@ public class AuthService {
             throw new RuntimeException("SHA-256 algorithm not available", e);
         }
     }
+
+    public synchronized boolean updateProfile(String token, String fullName, String email, String phone) {
+        User user = validateToken(token);
+        if (user == null) return false;
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            user.setFullName(fullName.trim());
+        }
+        if (email != null && !email.trim().isEmpty()) {
+            user.setEmail(email.trim());
+        }
+        if (phone != null) {
+            user.setPhone(phone.trim());
+        }
+        return true;
+    }
+
+    public synchronized boolean changePassword(String token, String currentPassword, String newPassword) {
+        User user = validateToken(token);
+        if (user == null) return false;
+        if (user.isGoogleAuth()) {
+            throw new IllegalArgumentException("Google authenticated accounts manage their security through Google Account settings.");
+        }
+        String currentHash = hashPassword(currentPassword, user.getSalt());
+        if (!currentHash.equals(user.getPasswordHash())) {
+            throw new IllegalArgumentException("Incorrect current password.");
+        }
+        if (newPassword == null || newPassword.trim().length() < 4) {
+            throw new IllegalArgumentException("New password must be at least 4 characters.");
+        }
+        String newSalt = UUID.randomUUID().toString().substring(0, 8);
+        String newHash = hashPassword(newPassword, newSalt);
+        user.setPassword(newHash, newSalt);
+        return true;
+    }
 }

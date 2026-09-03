@@ -5,6 +5,7 @@ package com.railway.model;
  */
 public enum BookingStatus {
     CONFIRMED("CNF", "Confirmed"),
+    RAC("RAC", "Reservation Against Cancellation"),
     WAITING_LIST("WL", "Waiting List"),
     CANCELLED("CAN", "Cancelled");
 

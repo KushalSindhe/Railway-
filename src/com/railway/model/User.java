@@ -8,11 +8,11 @@ import java.util.Objects;
  */
 public class User {
     private final String username;
-    private final String passwordHash;
-    private final String salt;
-    private final String fullName;
-    private final String email;
-    private final String phone;
+    private String passwordHash;
+    private String salt;
+    private String fullName;
+    private String email;
+    private String phone;
     private final UserRole role;
     private final String authProvider;
     private final String avatarUrl;
@@ -56,12 +56,35 @@ public class User {
         return fullName;
     }
 
+    public void setFullName(String fullName) {
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            this.fullName = fullName.trim();
+        }
+    }
+
     public String getEmail() {
         return email;
     }
 
+    public void setEmail(String email) {
+        if (email != null && !email.trim().isEmpty()) {
+            this.email = email.trim();
+        }
+    }
+
     public String getPhone() {
         return phone;
+    }
+
+    public void setPhone(String phone) {
+        if (phone != null) {
+            this.phone = phone.trim();
+        }
+    }
+
+    public void setPassword(String passwordHash, String salt) {
+        this.passwordHash = passwordHash;
+        this.salt = salt;
     }
 
     public UserRole getRole() {

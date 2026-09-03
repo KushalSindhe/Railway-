@@ -30,6 +30,13 @@ public class RailwayNetworkService {
      * Enforces uniqueness of Station ID.
      */
     public synchronized Station addStation(String id, String name) {
+        return addStation(id, name, "All India", name, "IR", 450.0, 240.0);
+    }
+
+    /**
+     * Adds a new station with state, district, zone, and SVG map coordinates.
+     */
+    public synchronized Station addStation(String id, String name, String state, String district, String zone, double mapX, double mapY) {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("Station ID cannot be empty.");
         }
@@ -37,7 +44,7 @@ public class RailwayNetworkService {
         if (stationMap.containsKey(cleanId)) {
             throw new IllegalArgumentException("Station with ID '" + cleanId + "' already exists.");
         }
-        Station station = new Station(cleanId, name);
+        Station station = new Station(cleanId, name, state, district, zone, mapX, mapY);
         stationMap.put(cleanId, station);
         networkGraph.addVertex(station);
         return station;
