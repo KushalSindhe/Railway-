@@ -1,0 +1,22 @@
+# ====================================================================
+# RAILWAY RESERVATION SYSTEM - REQUIREMENTS & GITHUB CONFIGURATION
+# ====================================================================
+
+# 1. GITHUB REPOSITORY DETAILS (PLEASE PROVIDE THIS TO PUSH):
+# --------------------------------------------------------------------
+# Create a new repository on https://github.com/new (leave it empty, without README/license)
+# Then copy and paste your repository link below:
+GITHUB_REPOSITORY_URL=https://github.com/<your-username>/<your-repo-name>.git
+DEFAULT_BRANCH=main
+
+# 2. RUNTIME & SYSTEM REQUIREMENTS:
+# --------------------------------------------------------------------
+# - Git CLI: Version 2.20+ (Installed: git 2.55.0)
+# - Java Development Kit: JDK 17 or JDK 21+
+# - Dependencies: None (Pure Java SE, zero external JARs/libraries needed)
+# - Web Browser: Any modern browser (Chrome, Edge, Firefox) for http://localhost:8080/
+
+# 3. GITHUB AUTHENTICATION REQUIREMENT:
+# --------------------------------------------------------------------
+# Make sure you are logged into GitHub in your browser or Git Credential Manager,
+# or have a GitHub Personal Access Token (PAT) with "repo" scope ready.

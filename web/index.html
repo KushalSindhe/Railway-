@@ -1,0 +1,4448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BHARAT RAIL EXPRESS | Ultra-Dynamic Luxury Railway & Route Visualizer</title>
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Official Google Identity Services SDK (For live OAuth 2.0 / One Tap) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <style>
+    :root {
+      --gold-primary: #d4af37;
+      --gold-light: #fef08a;
+      --gold-glow: rgba(212, 175, 55, 0.45);
+      --sapphire-dark: #050b14;
+      --sapphire-card: rgba(10, 20, 38, 0.82);
+      --sapphire-border: rgba(212, 175, 55, 0.25);
+      --sapphire-hover: rgba(16, 32, 60, 0.95);
+      --emerald-accent: #10b981;
+      --cyan-accent: #06b6d4;
+      --amber-accent: #f59e0b;
+      --crimson-accent: #f43f5e;
+      --text-white: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-gold: #fde047;
+      --font-serif: 'Cinzel', serif;
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'Space Grotesk', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--sapphire-dark);
+      color: var(--text-white);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Cinematic Dynamic Background with Ken Burns Zoom */
+    .bg-slider {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      overflow: hidden;
+    }
+
+    .bg-slide {
+      position: absolute;
+      inset: -30px;
+      background-size: cover;
+      background-position: center;
+      opacity: 0;
+      transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 14s ease-out;
+      transform: scale(1.03);
+      filter: brightness(0.68) contrast(1.12);
+    }
+
+    .bg-slide.active {
+      opacity: 1;
+      transform: scale(1.14);
+    }
+
+    /* Ambient Luxury Vignette Overlay */
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(circle at 50% 15%, rgba(5, 11, 20, 0.5) 0%, rgba(5, 11, 20, 0.94) 85%),
+                  linear-gradient(180deg, rgba(5, 11, 20, 0.35) 0%, rgba(5, 11, 20, 0.98) 100%);
+      pointer-events: none;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      position: sticky;
+      top: 35px;
+      z-index: 100;
+      backdrop-filter: blur(25px) saturate(190%);
+      background: rgba(6, 14, 26, 0.82);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+      padding: 12px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+    }
+
+    .royal-emblem {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fde047 0%, #b45309 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--gold-glow), inset 0 0 8px rgba(255, 255, 255, 0.6);
+      border: 2px solid #fef08a;
+      font-size: 1.3rem;
+      animation: spinEmblem 40s linear infinite;
+    }
+
+    @keyframes spinEmblem {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      background: linear-gradient(90deg, #ffffff, #fde047, #d4af37);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+    }
+
+    .brand-text p {
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--emerald-accent);
+      box-shadow: 0 0 10px var(--emerald-accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Header Controls */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-btn {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-white);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.05rem;
+      transition: all 0.3s;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-light);
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      max-width: 1320px;
+      margin: 28px auto 16px;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 18px;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 50px;
+      color: var(--gold-light);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.8rem, 3.8vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      line-height: 1.2;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+      margin-bottom: 8px;
+    }
+
+    .hero-subtitle {
+      font-size: 0.98rem;
+      color: #94a3b8;
+      max-width: 780px;
+      margin: 0 auto 20px;
+      line-height: 1.6;
+    }
+
+    /* Live Simulation Control Bar */
+    .sim-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .sim-pill {
+      background: rgba(11, 23, 42, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #cbd5e1;
+    }
+
+    .speed-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: all 0.2s;
+    }
+
+    .speed-btn.active {
+      background: var(--gold-primary);
+      color: #060e1a;
+      font-weight: 700;
+      border-color: var(--gold-light);
+    }
+
+    /* Quick Stats Ribbon */
+    .stats-ribbon {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .stat-chip {
+      background: rgba(11, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 18px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s;
+    }
+
+    .stat-chip:hover {
+      border-color: var(--gold-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    .stat-chip .val {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+
+    .stat-chip .lbl {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #cbd5e1;
+    }
+
+    /* Tab Navigation */
+    .tab-nav-container {
+      max-width: 1320px;
+      margin: 0 auto 24px;
+      padding: 0 24px;
+    }
+
+    .tab-pills {
+      display: flex;
+      gap: 8px;
+      background: rgba(11, 23, 42, 0.8);
+      backdrop-filter: blur(18px);
+      padding: 6px;
+      border-radius: 16px;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tab-pills::-webkit-scrollbar { display: none; }
+
+    .tab-pill {
+      flex: 1;
+      min-width: 160px;
+      padding: 12px 18px;
+      border: none;
+      background: transparent;
+      color: #cbd5e1;
+      font-weight: 600;
+      font-size: 0.88rem;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .tab-pill:hover {
+      color: var(--text-white);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-pill.active {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(212, 175, 55, 0.08));
+      color: var(--gold-light);
+      border: 1px solid var(--gold-primary);
+      box-shadow: 0 4px 20px var(--gold-glow);
+    }
+
+    /* Content Area & Cards */
+    .content-area {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .luxury-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+    }
+
+    .col-4 { grid-column: span 4; }
+    .col-5 { grid-column: span 5; }
+    .col-6 { grid-column: span 6; }
+    .col-7 { grid-column: span 7; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    @media (max-width: 1024px) {
+      .col-4, .col-5, .col-6, .col-7, .col-8 { grid-column: span 12; }
+    }
+
+    .glass-card {
+      background: var(--sapphire-card);
+      backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid var(--sapphire-border);
+      border-radius: 20px;
+      padding: 26px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+      opacity: 0.6;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card-title {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-tag {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--gold-light);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(6, 14, 26, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: var(--text-white);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+      background: rgba(11, 23, 42, 0.9);
+    }
+
+    select option {
+      background: #0b172a;
+      color: #fff;
+    }
+
+    .station-swap-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .swap-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      flex-shrink: 0;
+      margin-top: 24px;
+    }
+
+    .swap-btn:hover {
+      transform: rotate(180deg) scale(1.1);
+      background: var(--gold-primary);
+      color: #060e1a;
+      box-shadow: 0 0 20px var(--gold-glow);
+    }
+
+    /* Buttons */
+    .btn-royal {
+      width: 100%;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #d4af37 0%, #b45309 100%);
+      border: 1px solid #fef08a;
+      border-radius: 12px;
+      color: #060e1a;
+      font-family: var(--font-sans);
+      font-size: 0.98rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-royal:hover {
+      background: linear-gradient(135deg, #fef08a 0%, #d4af37 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(212, 175, 55, 0.5);
+    }
+
+    .btn-secondary {
+      padding: 10px 18px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      color: var(--text-white);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--text-white);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: #ef4444;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Live Status Badges */
+    .seat-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .seat-cnf {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald-accent);
+      color: #34d399;
+    }
+
+    .seat-wl {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--amber-accent);
+      color: #fbbf24;
+    }
+
+    .seat-can {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--crimson-accent);
+      color: #f87171;
+    }
+
+    /* Interactive Live Simulation Map Container */
+    .map-container {
+      position: relative;
+      background: rgba(5, 12, 22, 0.9);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      overflow: hidden;
+      min-height: 480px;
+    }
+
+    .map-control-overlay {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .map-control-overlay > * {
+      pointer-events: auto;
+    }
+
+    .map-overlay-badge {
+      background: rgba(11, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--gold-light);
+    }
+
+    svg.network-map {
+      width: 100%;
+      height: 480px;
+      display: block;
+    }
+
+    .track-line {
+      stroke: rgba(255, 255, 255, 0.16);
+      stroke-width: 2.5;
+      stroke-dasharray: 4 4;
+      transition: all 0.5s ease;
+    }
+
+    .track-line.highlighted {
+      stroke: var(--gold-primary);
+      stroke-width: 4.5;
+      stroke-dasharray: none;
+      filter: drop-shadow(0 0 10px var(--gold-glow));
+    }
+
+    .track-line.exploring {
+      stroke: var(--cyan-accent);
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 8px var(--cyan-accent));
+    }
+
+    /* Animated Live Moving Trains */
+    .sim-train-marker {
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+
+    .sim-train-marker:hover {
+      filter: drop-shadow(0 0 15px #fde047);
+    }
+
+    .station-node {
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .station-node circle.outer {
+      fill: rgba(11, 23, 42, 0.92);
+      stroke: var(--gold-primary);
+      stroke-width: 2;
+      transition: all 0.3s;
+    }
+
+    .station-node circle.inner {
+      fill: var(--gold-light);
+      transition: all 0.3s;
+    }
+
+    .station-node:hover circle.outer {
+      stroke: #ffffff;
+      r: 13;
+      filter: drop-shadow(0 0 14px var(--gold-primary));
+    }
+
+    .station-node.active-route circle.outer {
+      stroke: #34d399;
+      fill: rgba(16, 185, 129, 0.3);
+      r: 12;
+    }
+
+    .station-node text {
+      fill: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-sans);
+      pointer-events: none;
+    }
+
+    /* Interactive Coach Seat Grid */
+    .coach-layout-preview {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: rgba(6, 14, 26, 0.85);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 14px;
+    }
+
+    .seat-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seat-box.available {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald-accent);
+      color: #34d399;
+    }
+
+    .seat-box.available:hover {
+      background: var(--emerald-accent);
+      color: #060e1a;
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+    }
+
+    .seat-box.selected {
+      background: var(--gold-primary);
+      border: 2px solid #fff;
+      color: #060e1a;
+      transform: scale(1.1);
+      box-shadow: 0 0 20px var(--gold-glow);
+    }
+
+    .seat-box.reserved {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    /* Station Modal Drawer */
+    .station-drawer {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100vh;
+      background: rgba(8, 18, 34, 0.95);
+      backdrop-filter: blur(25px);
+      border-left: 1px solid var(--gold-primary);
+      box-shadow: -15px 0 50px rgba(0, 0, 0, 0.7);
+      z-index: 200;
+      transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .station-drawer.open {
+      right: 0;
+    }
+
+    .drawer-close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: #cbd5e1;
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    /* Digital Luxury Boarding Pass (E-Ticket) */
+    .boarding-pass {
+      background: linear-gradient(135deg, rgba(15, 28, 48, 0.95), rgba(8, 16, 30, 0.98));
+      border: 2px solid var(--gold-primary);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(212, 175, 55, 0.1);
+      margin-top: 20px;
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .pass-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed rgba(212, 175, 55, 0.3);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .pass-title {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--gold-light);
+      letter-spacing: 2px;
+    }
+
+    .pass-pnr {
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--gold-primary);
+      letter-spacing: 2px;
+      background: rgba(212, 175, 55, 0.1);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    .pass-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .pass-field .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .pass-field .value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .barcode-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(212, 175, 55, 0.3);
+    }
+
+    .fake-barcode {
+      height: 38px;
+      width: 220px;
+      background: repeating-linear-gradient(
+        90deg,
+        #fff,
+        #fff 2px,
+        transparent 2px,
+        transparent 5px,
+        #fff 5px,
+        #fff 8px,
+        transparent 8px,
+        transparent 10px
+      );
+      opacity: 0.7;
+    }
+
+    /* Luxury Fleet Table */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(6, 14, 26, 0.6);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: rgba(15, 28, 48, 0.85);
+      color: var(--gold-light);
+      font-family: var(--font-serif);
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+    }
+
+    tr:hover td {
+      background: rgba(212, 175, 55, 0.05);
+    }
+
+    /* Floating Admin Hub Button */
+    .floating-admin-trigger {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-light);
+      padding: 10px 18px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px var(--gold-glow);
+      z-index: 99;
+      transition: all 0.3s;
+    }
+
+    .floating-admin-trigger:hover {
+      transform: translateY(-3px) scale(1.03);
+      border-color: #fff;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .luxury-toast {
+      background: rgba(11, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--gold-primary);
+      border-radius: 14px;
+      padding: 16px 22px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 15px var(--gold-glow);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 320px;
+      animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Footer */
+    footer {
+      max-width: 1320px;
+      margin: 50px auto 30px;
+      padding: 24px;
+      border-top: 1px solid rgba(212, 175, 55, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    /* Royal Travel Experience Showcase */
+    .experience-showcase-container {
+      max-width: 1320px;
+      margin: 0 auto 30px;
+      padding: 0 24px;
+    }
+
+    .experience-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 1100px) {
+      .experience-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .experience-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .exp-card {
+      background: var(--sapphire-card);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--sapphire-border);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .exp-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--gold-primary);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 20px var(--gold-glow);
+    }
+
+    .exp-img-wrapper {
+      position: relative;
+      width: 100%;
+      height: 155px;
+      overflow: hidden;
+    }
+
+    .exp-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.8s ease;
+      filter: brightness(0.9) contrast(1.08);
+    }
+
+    .exp-card:hover .exp-img {
+      transform: scale(1.08);
+      filter: brightness(1.02);
+    }
+
+    .exp-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(6, 14, 26, 0.88);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-light);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      text-transform: uppercase;
+    }
+
+    .exp-expand-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(6, 14, 26, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: all 0.3s;
+    }
+
+    .exp-card:hover .exp-expand-btn {
+      opacity: 1;
+    }
+
+    .exp-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    .exp-content h4 {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      color: var(--text-white);
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .exp-content p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 14px;
+      flex: 1;
+    }
+
+    .exp-action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .exp-btn {
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-light);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .exp-btn:hover {
+      background: var(--gold-primary);
+      color: #060e1a;
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    .exp-meta {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: #64748b;
+    }
+
+    /* Executive Coach Cabin Preview Banner */
+    .cabin-visual-banner {
+      position: relative;
+      width: 100%;
+      height: 135px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .cabin-visual-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s ease;
+      filter: brightness(0.85);
+    }
+
+    .cabin-visual-banner:hover .cabin-visual-img {
+      transform: scale(1.06);
+      filter: brightness(0.98);
+    }
+
+    .cabin-visual-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(5, 11, 20, 0.2) 0%, rgba(5, 11, 20, 0.88) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 12px 14px;
+    }
+
+    .cabin-visual-badges {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .cabin-badge {
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #cbd5e1;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .cabin-badge.gold {
+      border-color: var(--gold-primary);
+      color: var(--gold-light);
+      background: rgba(212, 175, 55, 0.25);
+    }
+
+    .cabin-visual-title {
+      font-family: var(--font-serif);
+      font-size: 0.98rem;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .cabin-visual-zoom-tip {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(6, 14, 26, 0.8);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--gold-light);
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    /* Fleet Visual Showcase in Tab 4 */
+    .fleet-showcase-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 768px) {
+      .fleet-showcase-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .fleet-card {
+      background: rgba(6, 14, 26, 0.75);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .fleet-card:hover {
+      border-color: var(--gold-primary);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px var(--gold-glow);
+    }
+
+    .fleet-card-img-wrap {
+      width: 140px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .fleet-card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.88);
+      transition: transform 0.6s ease;
+    }
+
+    .fleet-card:hover .fleet-card-img {
+      transform: scale(1.08);
+      filter: brightness(1);
+    }
+
+    .fleet-card-badge {
+      position: absolute;
+      bottom: 6px;
+      left: 6px;
+      font-size: 0.6rem;
+      background: rgba(6, 14, 26, 0.88);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .fleet-card-info {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1;
+    }
+
+    .fleet-card-info h4 {
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      color: var(--gold-light);
+      margin-bottom: 4px;
+    }
+
+    .fleet-card-info p {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .fleet-card-stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: #34d399;
+    }
+
+    .fleet-card-stats span {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    /* Boarding Pass Photo Header */
+    .ticket-visual-header {
+      position: relative;
+      width: 100%;
+      height: 90px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid var(--gold-primary);
+    }
+
+    .ticket-visual-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.72) contrast(1.1);
+    }
+
+    .ticket-visual-badge {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      background: rgba(6, 14, 26, 0.88);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-light);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    /* High-Resolution Photo Lightbox */
+    .image-lightbox-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.94);
+      backdrop-filter: blur(25px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .lightbox-content {
+      position: relative;
+      max-width: 960px;
+      width: 100%;
+      background: rgba(11, 23, 42, 0.96);
+      border: 1px solid var(--gold-primary);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 30px var(--gold-glow);
+    }
+
+    .lightbox-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(6, 14, 26, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+
+    .lightbox-close-btn:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-light);
+      transform: scale(1.1);
+    }
+
+    .lightbox-main-img {
+      width: 100%;
+      max-height: 520px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .lightbox-info {
+      padding: 20px 24px;
+      background: rgba(6, 14, 26, 0.95);
+      border-top: 1px solid rgba(212, 175, 55, 0.25);
+    }
+
+    .lightbox-info h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--gold-light);
+      margin-bottom: 6px;
+    }
+
+    .lightbox-info p {
+      font-size: 0.88rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .lightbox-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* =========================================================
+       USER AUTHENTICATION & PERSONAL BOOKINGS SYSTEM
+       ========================================================= */
+    .header-auth-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-profile-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(10, 25, 47, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: 40px;
+      padding: 4px 12px 4px 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .user-avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #060e1a;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+    }
+
+    .user-avatar-circle.admin {
+      background: linear-gradient(135deg, #ef4444, #991b1b);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+
+    .user-meta-col {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .user-name-text {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-role-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .user-role-tag.passenger {
+      color: #38bdf8;
+    }
+
+    .user-role-tag.admin {
+      color: #f87171;
+    }
+
+    .user-btn-bookings {
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      color: var(--gold-light);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .user-btn-bookings:hover {
+      background: rgba(212, 175, 55, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .user-badge-count {
+      background: var(--gold-primary);
+      color: #060e1a;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .user-btn-logout {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .user-btn-logout:hover {
+      color: #ef4444;
+      transform: scale(1.15);
+    }
+
+    /* Auth Modal Backdrop & Dialog */
+    .auth-modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(4, 9, 18, 0.82);
+      backdrop-filter: blur(14px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .auth-modal-dialog {
+      background: linear-gradient(160deg, rgba(13, 27, 42, 0.96) 0%, rgba(6, 14, 26, 0.98) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 35px rgba(212, 175, 55, 0.18);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 480px;
+      padding: 28px 30px;
+      position: relative;
+      color: #f8fafc;
+      animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .auth-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-modal-close:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+      color: #f87171;
+    }
+
+    .auth-modal-header {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .auth-modal-logo {
+      font-size: 2.2rem;
+      display: inline-block;
+      margin-bottom: 4px;
+      filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.4));
+    }
+
+    .auth-modal-title {
+      font-family: var(--font-serif);
+      font-size: 1.45rem;
+      color: var(--gold-light);
+      letter-spacing: 0.02em;
+    }
+
+    .auth-modal-subtitle {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 3px;
+    }
+
+    .auth-quick-bar {
+      background: rgba(212, 175, 55, 0.08);
+      border: 1px dashed rgba(212, 175, 55, 0.25);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 18px;
+    }
+
+    .auth-quick-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .auth-quick-chips {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .btn-quick-chip {
+      background: rgba(10, 25, 47, 0.9);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: #f8fafc;
+      padding: 6px 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.2s;
+    }
+
+    .btn-quick-chip:hover {
+      background: rgba(212, 175, 55, 0.25);
+      border-color: var(--gold-primary);
+      transform: translateY(-2px);
+    }
+
+    .btn-quick-chip strong {
+      font-size: 0.72rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 90px;
+    }
+
+    .btn-quick-chip small {
+      font-size: 0.62rem;
+      color: var(--gold-light);
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .auth-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab-btn.active {
+      background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+      color: #060e1a;
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+    }
+
+    .auth-alert-box {
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .auth-alert-box.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .auth-alert-box.success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+
+    /* Google Authentication Button */
+    .btn-google-auth {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      background: #ffffff;
+      color: #1f2937;
+      border: 1px solid #dadce0;
+      border-radius: 10px;
+      padding: 11px 18px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.12);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-top: 4px;
+      margin-bottom: 12px;
+    }
+
+    .btn-google-auth:hover {
+      background: #f8fafc;
+      box-shadow: 0 4px 14px rgba(255,255,255,0.15), 0 2px 5px rgba(0,0,0,0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-google-auth:active {
+      background: #f1f5f9;
+      transform: translateY(0);
+    }
+
+    .google-svg {
+      flex-shrink: 0;
+    }
+
+    /* Auth Divider */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 12px 0 16px;
+      color: #64748b;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .auth-divider span {
+      padding: 0 10px;
+    }
+
+    /* Google Account Chooser Modal */
+    .google-chooser-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(12px);
+      z-index: 10005;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .google-chooser-card {
+      background: #ffffff;
+      color: #202124;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .google-chooser-header {
+      padding: 24px 28px 16px;
+      text-align: center;
+      border-bottom: 1px solid #f1f3f4;
+    }
+
+    .google-chooser-title {
+      font-size: 1.35rem;
+      font-weight: 500;
+      color: #202124;
+      margin-top: 10px;
+      margin-bottom: 2px;
+    }
+
+    .google-chooser-sub {
+      font-size: 0.88rem;
+      color: #5f6368;
+    }
+
+    .google-account-list {
+      max-height: 290px;
+      overflow-y: auto;
+    }
+
+    .google-account-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 24px;
+      border-bottom: 1px solid #f1f3f4;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .google-account-item:hover {
+      background: #f8f9fa;
+    }
+
+    .google-avatar-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #ffffff;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .google-acc-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .google-acc-name {
+      font-weight: 500;
+      font-size: 0.92rem;
+      color: #202124;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .google-acc-email {
+      font-size: 0.8rem;
+      color: #5f6368;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .google-chooser-custom-box {
+      padding: 16px 24px;
+      background: #fafafa;
+      border-top: 1px solid #e0e0e0;
+      display: none;
+    }
+
+    .google-chooser-footer {
+      padding: 14px 24px;
+      font-size: 0.74rem;
+      color: #70757a;
+      background: #f8f9fa;
+      border-top: 1px solid #f1f3f4;
+      line-height: 1.45;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .google-chooser-cancel {
+      background: none;
+      border: none;
+      color: #1a73e8;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 0.84rem;
+      padding: 4px 8px;
+    }
+
+    .user-avatar-circle.google {
+      background: #ffffff;
+      color: #060e1a;
+      box-shadow: 0 0 10px rgba(66, 133, 244, 0.4);
+      border: 1.5px solid #4285F4;
+    }
+
+    .user-role-tag.google {
+      color: #60a5fa;
+    }
+
+    /* Personal Bookings Cards Grid */
+    .my-bookings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .booking-ticket-card {
+      background: linear-gradient(145deg, rgba(13, 27, 42, 0.85), rgba(6, 14, 26, 0.95));
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .booking-ticket-card:hover {
+      border-color: rgba(212, 175, 55, 0.5);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .booking-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-bottom: 10px;
+    }
+
+    .booking-pnr-tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--gold-light);
+      background: rgba(212, 175, 55, 0.12);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    .booking-card-route {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 10px 14px;
+      border-radius: 10px;
+    }
+
+    .booking-station-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .booking-station-code {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .booking-station-label {
+      font-size: 0.68rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    .booking-route-arrow {
+      color: var(--gold-primary);
+      font-size: 1.2rem;
+    }
+
+    .booking-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+      font-size: 0.8rem;
+      margin-bottom: 14px;
+    }
+
+    .booking-detail-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .booking-detail-item span {
+      color: #94a3b8;
+      font-size: 0.7rem;
+    }
+
+    .booking-detail-item strong {
+      color: #f1f5f9;
+      font-size: 0.86rem;
+    }
+
+    .booking-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Photographic Background Slider (High-Resolution Local Showcase) -->
+  <div class="bg-slider">
+    <div id="slide-0" class="bg-slide active" style="background-image: url('images/hero_train.jpg');" data-theme="Alpine Viaduct Express" data-fallback="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957"></div>
+    <div id="slide-1" class="bg-slide" style="background-image: url('images/grand_station.jpg');" data-theme="Grand Central Terminus" data-fallback="https://images.unsplash.com/photo-1532105956626-9569c03602f6"></div>
+    <div id="slide-2" class="bg-slide" style="background-image: url('images/luxury_cabin.jpg');" data-theme="Executive Royal Saloon" data-fallback="https://images.unsplash.com/photo-1509749837427-ac94a2553d0e"></div>
+    <div id="slide-3" class="bg-slide" style="background-image: url('images/scenic_railway.jpg');" data-theme="Coastal Ocean Bridge" data-fallback="https://images.unsplash.com/photo-1474487548417-781cb71495f3"></div>
+  </div>
+
+  <div class="bg-overlay"></div>
+
+  <!-- Royal Navigation Header -->
+  <header>
+    <div class="brand-container" onclick="location.reload()">
+      <div class="royal-emblem">🚆</div>
+      <div class="brand-text">
+        <h1>Bharat Rail Express</h1>
+        <p><span class="status-pulse"></span> IR-DSA ENGINE LIVE • DIJKSTRA GRAPH MIN-HEAP • FIFO QUEUE</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Audio Toggle -->
+      <button class="icon-btn" id="soundToggleBtn" onclick="toggleAudio()" title="Sound Effects">🔔</button>
+      <!-- Simulation Speed -->
+      <button class="icon-btn" onclick="toggleSimulationSpeed()" id="simSpeedBtn" title="Toggle Train Movement Speed">⚡ 1x</button>
+      <!-- User Auth Header Container -->
+      <div id="authHeaderContainer" class="header-auth-wrap">
+        <button class="btn-royal" style="padding: 6px 14px; font-size: 0.82rem;" onclick="openAuthModal('login')">
+          <span>🔒 Sign In</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-banner">
+    <div class="hero-badge">✨ Next-Generation High-Speed Railway Operating System</div>
+    <h2 class="hero-title">Live Train Simulation & Precision Routing</h2>
+    <p class="hero-subtitle">
+      Experience live train movement, dynamic seat layout reservation, interactive station diagnostics, and step-by-step Dijkstra shortest-path pathfinding.
+    </p>
+
+    <!-- Quick Stats Ribbon with Auto-Sync -->
+    <div class="stats-ribbon">
+      <div class="stat-chip">
+        <span class="val" id="statStations">10</span>
+        <span class="lbl">Stations</span>
+      </div>
+      <div class="stat-chip">
+        <span class="val" id="statTrains">6</span>
+        <span class="lbl">Active Trains</span>
+      </div>
+      <div class="stat-chip">
+        <span class="val" id="statSeats">20</span>
+        <span class="lbl">Total Capacity</span>
+      </div>
+      <div class="stat-chip">
+        <span class="val" id="statBookings">1</span>
+        <span class="lbl">Confirmed</span>
+      </div>
+      <div class="stat-chip">
+        <span class="val" id="statWaitlist">0</span>
+        <span class="lbl">Waitlist Queue</span>
+      </div>
+      <div class="stat-chip" style="border-color: rgba(16, 185, 129, 0.4);">
+        <span class="val" style="color: #34d399;" id="statSyncTime">LIVE</span>
+        <span class="lbl">Sync Active</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Royal Photographic Experience Showcase Grid -->
+  <section class="experience-showcase-container">
+    <div class="experience-grid">
+      <!-- Card 1: High-Speed Viaduct Corridor -->
+      <div class="exp-card" onclick="openImageLightbox('images/hero_train.jpg', 'Alpine Viaduct Express', 'High-speed aerodynamic bullet train carving along elevated mountain viaducts at 160+ km/h.')">
+        <div class="exp-img-wrapper">
+          <img src="images/hero_train.jpg" alt="High-Speed Alpine Train" class="exp-img" />
+          <span class="exp-badge">160+ KM/H TELEMETRY</span>
+          <button class="exp-expand-btn" title="View Fullscreen Photo">🔍</button>
+        </div>
+        <div class="exp-content">
+          <h4>Alpine Viaduct High-Speed Rail</h4>
+          <p>Aerodynamic train sets navigating mountain viaducts with real-time speed monitoring and min-heap routing.</p>
+          <div class="exp-action-row">
+            <button class="exp-btn" onclick="event.stopPropagation(); switchTab('route');">View Live Visualizer ⚡</button>
+            <span class="exp-meta">Min-Heap Dispatch</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Grand Junction Terminus -->
+      <div class="exp-card" onclick="openImageLightbox('images/grand_station.jpg', 'Grand Central Terminus', 'Historic cathedral-vaulted terminal with illuminated departure boards and graph-scheduled operations.')">
+        <div class="exp-img-wrapper">
+          <img src="images/grand_station.jpg" alt="Grand Station Terminus" class="exp-img" />
+          <span class="exp-badge">10 MAJOR JUNCTIONS</span>
+          <button class="exp-expand-btn" title="View Fullscreen Photo">🔍</button>
+        </div>
+        <div class="exp-content">
+          <h4>Grand Central Terminal Hub</h4>
+          <p>Historic cathedral junctions interconnected with Dijkstra shortest-path calculations across 10 stations.</p>
+          <div class="exp-action-row">
+            <button class="exp-btn" onclick="event.stopPropagation(); switchTab('route');">Find Shortest Route 📍</button>
+            <span class="exp-meta">O((V+E) log V)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Royal Executive Saloon -->
+      <div class="exp-card" onclick="openImageLightbox('images/luxury_cabin.jpg', 'Executive First Class Saloon', 'Handcrafted mahogany finishes, panoramic alpine window views, and guaranteed FIFO waitlist seat allocation.')">
+        <div class="exp-img-wrapper">
+          <img src="images/luxury_cabin.jpg" alt="Luxury First Class Cabin" class="exp-img" />
+          <span class="exp-badge">ROYAL FIRST CLASS (1A)</span>
+          <button class="exp-expand-btn" title="View Fullscreen Photo">🔍</button>
+        </div>
+        <div class="exp-content">
+          <h4>Executive First Class Saloon</h4>
+          <p>Panoramic mountain view windows, plush recliners, and fair FIFO waiting list auto-promotion queue.</p>
+          <div class="exp-action-row">
+            <button class="exp-btn" onclick="event.stopPropagation(); switchTab('booking');">Book Ticket 🎟️</button>
+            <span class="exp-meta">FIFO Queue</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Coastal Ocean Express -->
+      <div class="exp-card" onclick="openImageLightbox('images/scenic_railway.jpg', 'Konkan Coastal Ocean Express', 'High-speed ocean viaduct line skimming over coastal cliffs and azure waters with dynamic tariff pricing.')">
+        <div class="exp-img-wrapper">
+          <img src="images/scenic_railway.jpg" alt="Coastal Scenic Rail" class="exp-img" />
+          <span class="exp-badge">COASTAL SEA BRIDGE</span>
+          <button class="exp-expand-btn" title="View Fullscreen Photo">🔍</button>
+        </div>
+        <div class="exp-content">
+          <h4>Scenic Coastal Rail Bridge</h4>
+          <p>Spectacular ocean viaducts and coastal cliffs traversed with real-time seat inventory and tariff matrices.</p>
+          <div class="exp-action-row">
+            <button class="exp-btn" onclick="event.stopPropagation(); switchTab('fleet');">Inspect Fleet Matrix 🚆</button>
+            <span class="exp-meta">Dynamic Tariff</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation Tabs -->
+  <div class="tab-nav-container">
+    <div class="tab-pills">
+      <button class="tab-pill active" onclick="switchTab('route')">
+        <span>⚡</span> Live Visualizer & Map
+      </button>
+      <button class="tab-pill" onclick="switchTab('booking')">
+        <span>🎟️</span> Book Tickets
+      </button>
+      <button class="tab-pill" onclick="switchTab('pnr')">
+        <span>🔍</span> PNR & Boarding Pass
+      </button>
+      <button class="tab-pill" id="tabBtnMyBookings" onclick="switchTab('my-bookings')">
+        <span>📋</span> My Bookings <span id="navMyBookingsBadge" class="user-badge-count" style="display:none; margin-left: 4px;">0</span>
+      </button>
+      <button class="tab-pill" onclick="switchTab('fleet')">
+        <span>🚆</span> Fleet Matrix & Live Status
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Areas -->
+  <main class="content-area">
+
+    <!-- TAB 1: LIVE MAP & STEP-BY-STEP DIJKSTRA -->
+    <section id="pane-route" class="tab-pane active">
+      <div class="luxury-grid">
+        <div class="col-4">
+          <div class="glass-card">
+            <div class="card-head">
+              <h3 class="card-title"><span>📍</span> Graph Route Finder</h3>
+              <span class="card-tag">Dijkstra Min-Heap</span>
+            </div>
+
+            <div class="form-group">
+              <label>Origin Station</label>
+              <select id="dijkstraSrc" onchange="onDijkstraStationChange()"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Destination Station</label>
+              <select id="dijkstraDst" onchange="onDijkstraStationChange()"></select>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+              <button class="btn-royal" style="flex: 1;" onclick="executeDijkstra(false)">
+                <span>Compute Optimal</span> ⚡
+              </button>
+              <button class="btn-secondary" style="padding: 10px 14px;" onclick="executeDijkstra(true)" title="Step-by-step algorithm animation">
+                🎬 Play Step-by-Step
+              </button>
+            </div>
+
+            <!-- Algorithm Progress / Output -->
+            <div id="routeTimeline" style="display:none; background: rgba(6, 14, 26, 0.7); border: 1px solid rgba(212,175,55,0.25); border-radius: 12px; padding: 16px; margin-top: 14px;">
+              <h4 style="color: var(--gold-light); font-size: 1rem; margin-bottom: 6px;" id="routeStatusHeading">Shortest Route Discovered</h4>
+              <p id="routeDistanceText" style="font-size: 0.88rem; color: #34d399; font-weight: 700; margin-bottom: 10px;"></p>
+              <div id="timelineStepList" style="display: flex; gap: 8px; overflow-x: auto; padding: 6px 0;"></div>
+            </div>
+
+            <div style="margin-top: 16px; padding: 12px; background: rgba(0,0,0,0.35); border-radius: 10px; font-size: 0.76rem; color: #94a3b8;">
+              💡 <strong>Interactive Map Tip:</strong> Click any station circle on the map to inspect live departures, or click a moving train marker to track speed and passenger capacity!
+            </div>
+          </div>
+        </div>
+
+        <div class="col-8">
+          <div class="glass-card" style="padding: 14px;">
+            <div class="map-container">
+              <div class="map-control-overlay">
+                <div class="map-overlay-badge">
+                  ACTIVE FLEET: <span id="fleetActiveCount" style="color: #34d399; font-weight: bold;">6 Moving Trains</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.72rem;" onclick="resetMapHighlight()">Reset Highlight</button>
+                </div>
+              </div>
+              <!-- Dynamic SVG Network Map with Moving Trains -->
+              <svg id="networkSvg" class="network-map" viewBox="0 0 900 480"></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: LUXURY BOOKING WITH INTERACTIVE BERTH PICKER -->
+    <section id="pane-booking" class="tab-pane">
+      <div class="luxury-grid">
+        <div class="col-7">
+          <div class="glass-card">
+            <div class="card-head">
+              <h3 class="card-title"><span>🎫</span> Book Train Tickets</h3>
+              <span class="card-tag">Multi-Class Booking</span>
+            </div>
+
+            <div class="station-swap-box form-group">
+              <div style="flex: 1;">
+                <label>Origin Junction</label>
+                <select id="bookSrc" onchange="onBookingStationChange()"></select>
+              </div>
+              <button class="swap-btn" onclick="swapBookingStations()" title="Swap Origin and Destination">⇄</button>
+              <div style="flex: 1;">
+                <label>Destination Junction</label>
+                <select id="bookDst" onchange="onBookingStationChange()"></select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Select Scheduled Train</label>
+              <select id="bookTrainSelect" onchange="updateBookingTrainPreview()"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Select Travel Class</label>
+              <select id="bookClassSelect" onchange="onTravelClassChange()">
+                <option value="1st Class" data-mult="2.4" data-coach="Coach H1" data-type="1A Executive Saloon & Coupe" data-img="images/luxury_cabin.jpg">1st Class (1A) - Executive Luxury Saloon & Coupe</option>
+                <option value="2nd Class" data-mult="1.8" data-coach="Coach A2" data-type="2A Two-Tier AC Sleeper" data-img="images/luxury_cabin.jpg">2nd Class (2A) - AC 2-Tier Sleeper</option>
+                <option value="3 Tier AC" data-mult="1.25" data-coach="Coach B1" data-type="3A Three-Tier AC Comfort" data-img="images/hero_train.jpg" selected>3 Tier AC (3A) - AC 3-Tier Express</option>
+                <option value="Sleeper" data-mult="0.65" data-coach="Coach S1" data-type="SL Standard Sleeper" data-img="images/scenic_railway.jpg">Sleeper (SL) - Standard Non-AC Sleeper</option>
+                <option value="General" data-mult="0.35" data-coach="Coach GS1" data-type="GN Second Sitting Unreserved" data-img="images/grand_station.jpg">General (GN) - Second Sitting Unreserved</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Passenger Full Name</label>
+              <input type="text" id="passName" placeholder="e.g. Maharani Gayatri Devi / Vikramaditya" value="Aarav Sharma" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="form-group">
+              <div>
+                <label>Passenger Age</label>
+                <input type="number" id="passAge" value="32" min="1" max="120" />
+              </div>
+              <div>
+                <label>Gender / Berth Category</label>
+                <select id="passGender">
+                  <option value="M">Male (Lower Berth)</option>
+                  <option value="F">Female (Window Berth)</option>
+                  <option value="O">Other (Any Berth)</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="btn-royal" onclick="executeBooking()">
+              <span>Confirm & Issue Ticket</span> ➔
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Interactive Coach Berth Picker & Fare Breakdown -->
+        <div class="col-5">
+          <div class="glass-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-head">
+                <h3 class="card-title"><span>🛋️</span> Coach Berth Selection</h3>
+                <span class="card-tag" id="liveSeatBadge">Checking...</span>
+              </div>
+
+              <!-- Travel Class Visual Preview Banner -->
+              <div class="cabin-visual-banner" id="cabinVisualBanner" onclick="openImageLightbox(document.getElementById('cabinVisualImg').src, document.getElementById('cabinVisualTitle').textContent, 'Selected travel class interior and coach amenities.')">
+                <img src="images/hero_train.jpg" alt="Selected Travel Class Cabin" class="cabin-visual-img" id="cabinVisualImg" />
+                <div class="cabin-visual-overlay">
+                  <div class="cabin-visual-badges" id="cabinVisualBadges">
+                    <span class="cabin-badge gold" id="cabinBadgeClass">★ 3 TIER AC (3A)</span>
+                    <span class="cabin-badge" id="cabinBadgeCoach">COACH B1</span>
+                  </div>
+                  <div class="cabin-visual-title" id="cabinVisualTitle">Coach B1 - 3A Three-Tier AC Comfort</div>
+                </div>
+                <div class="cabin-visual-zoom-tip">🔍 Click to Expand</div>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <h4 id="previewTrainName" style="color: var(--gold-light); font-size: 1.15rem; margin-bottom: 4px;">Loading fleet...</h4>
+                <p id="previewRouteStops" style="font-size: 0.8rem; color: #cbd5e1;"></p>
+              </div>
+
+              <label id="coachBerthSectionLabel">Select Berth in Coach B1 (Click to Choose)</label>
+              <div class="coach-layout-preview" id="coachPreviewBoxes"></div>
+              <div id="selectedBerthNote" style="font-size: 0.78rem; color: var(--gold-light); margin-top: 8px;">Auto-allocated next available berth.</div>
+
+              <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.86rem; color: #cbd5e1;">
+                  <span>Calculated Route Distance:</span>
+                  <strong id="previewDistance" style="color: var(--text-white);">-- km</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.86rem; color: #cbd5e1;">
+                  <span>Tariff Rate:</span>
+                  <strong id="previewRate" style="color: var(--text-white);">₹1.35 / km</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--gold-light); margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(212,175,55,0.2);">
+                  <span>Estimated Total Fare:</span>
+                  <strong id="previewTotalFare" style="font-family: var(--font-mono); font-size: 1.3rem;">₹0.00</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style="font-size: 0.76rem; color: #94a3b8; background: rgba(0,0,0,0.35); padding: 10px; border-radius: 8px; margin-top: 14px;">
+              🛡️ <strong>Fairness Queue:</strong> If capacity is filled, passenger is assigned to FIFO Waiting List and automatically promoted when a seat is released.
+            </div>
+          </div>
+        </div>
+
+        <!-- Digital Boarding Pass Container -->
+        <div class="col-12" id="ticketPassContainer">
+          <div class="boarding-pass" id="digitalPass">
+            <div class="pass-header">
+              <div>
+                <span class="pass-title">★ BHARAT RAILWAYS E-TICKET ★</span>
+                <p style="font-size: 0.75rem; color: #cbd5e1;">OFFICIAL DIGITAL BOARDING PASS</p>
+              </div>
+              <div class="pass-pnr" id="passPnr">PNR-XXXXXX</div>
+            </div>
+
+            <!-- Boarding Pass Train Visual Banner -->
+            <div class="ticket-visual-header">
+              <img src="images/hero_train.jpg" alt="Bharat Royal Express" class="ticket-visual-img" />
+              <div class="ticket-visual-badge">★ OFFICIAL IRCTC E-TICKET • CONFIRMED PASS ★</div>
+            </div>
+
+            <div class="pass-grid">
+              <div class="pass-field">
+                <div class="label">PASSENGER NAME</div>
+                <div class="value" id="passPassengerName">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">TRAIN & NUMBER</div>
+                <div class="value" id="passTrainDetails">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">JOURNEY STATIONS</div>
+                <div class="value" id="passJourneyRoute">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">BOOKING STATUS</div>
+                <div class="value" id="passStatus">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">COACH & SEAT NUMBER</div>
+                <div class="value" id="passSeatNumber">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">TOTAL FARE PAID</div>
+                <div class="value" id="passFare">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">BOOKING DATE</div>
+                <div class="value" id="passDate">--</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">CLASS</div>
+                <div class="value" id="passClass" style="color: var(--gold-light);">3 TIER AC (3A)</div>
+              </div>
+            </div>
+
+            <div class="barcode-container">
+              <div class="fake-barcode"></div>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn-secondary" onclick="window.print()">🖨️ Print Ticket</button>
+                <button class="btn-secondary" onclick="copyPnrToClipboard()">📋 Copy PNR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PNR INQUIRY & CANCELLATION -->
+    <section id="pane-pnr" class="tab-pane">
+      <div class="luxury-grid">
+        <div class="col-6" style="margin: 0 auto; grid-column: 4 / span 6;">
+          <div class="glass-card">
+            <div class="card-head">
+              <h3 class="card-title"><span>🔍</span> PNR Status & Cancellation</h3>
+              <span class="card-tag">Live Queue Auto-Escalation</span>
+            </div>
+
+            <div class="form-group">
+              <label>Enter 10-Character PNR Number</label>
+              <input type="text" id="pnrQueryInput" placeholder="e.g. PNR-100101" style="font-family: var(--font-mono); letter-spacing: 2px; font-size: 1.1rem; text-transform: uppercase;" />
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+              <span style="font-size: 0.75rem; color: #94a3b8; margin-right: 4px;">Quick Demo PNR:</span>
+              <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="document.getElementById('pnrQueryInput').value='PNR-100101'; queryPnrStatus();">PNR-100101</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <button class="btn-royal" onclick="queryPnrStatus()">Check Status</button>
+              <button class="btn-secondary btn-danger" onclick="cancelCurrentTicket()">Cancel Ticket</button>
+            </div>
+
+            <!-- Status Card Output -->
+            <div id="pnrStatusOutput" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <span id="outputPnrTag" style="font-family: var(--font-mono); font-weight: 700; color: var(--gold-light); font-size: 1.1rem;">PNR-100101</span>
+                <span id="outputStatusBadge" class="seat-status-pill seat-cnf">CONFIRMED</span>
+              </div>
+              <p id="outputPassenger" style="font-size: 1rem; font-weight: 600; margin-bottom: 6px;"></p>
+              <p id="outputTrain" style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 6px;"></p>
+              <p id="outputJourney" style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 12px;"></p>
+              <div style="display: flex; justify-content: space-between; font-size: 0.95rem; color: var(--gold-light); padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                <span>Total Fare:</span>
+                <strong id="outputFare">₹0.00</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: FLEET MATRIX -->
+    <section id="pane-fleet" class="tab-pane">
+      <div class="glass-card">
+        <div class="card-head">
+          <h3 class="card-title"><span>🚆</span> Active Train Fleet & Real-Time Inventory</h3>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="text" id="fleetFilterInput" placeholder="Instant Search train / station..." style="width: 220px; padding: 8px 12px; font-size: 0.85rem;" oninput="filterFleetTable()" />
+            <button class="btn-secondary" onclick="sortFleet('available')">Sort by Seats (MergeSort)</button>
+            <button class="btn-secondary" onclick="sortFleet('id')">Sort by Train# (QuickSort)</button>
+            <button class="btn-secondary" onclick="sortFleet('name')">Sort by Name</button>
+          </div>
+        </div>
+
+        <!-- Featured Fleet Visual Showcase -->
+        <div class="fleet-showcase-row">
+          <div class="fleet-card" onclick="openImageLightbox('images/hero_train.jpg', 'Vande Bharat High-Speed Express', 'Aerodynamic 160 km/h trainset with regenerative breaking and luxury executive seating.')">
+            <div class="fleet-card-img-wrap">
+              <img src="images/hero_train.jpg" alt="Vande Bharat Express" class="fleet-card-img" />
+              <div class="fleet-card-badge">FLAGSHIP FASTEST</div>
+            </div>
+            <div class="fleet-card-info">
+              <h4>Vande Bharat & Superfast Fleet</h4>
+              <p>Operating between New Delhi, Bhopal, Nagpur, and Bengaluru with prioritized min-heap dispatch.</p>
+              <div class="fleet-card-stats">
+                <span>⚡ 160 km/h</span>
+                <span>★ 99.8% On-Time</span>
+                <span>🛋️ Exec 1A</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="fleet-card" onclick="openImageLightbox('images/scenic_railway.jpg', 'Konkan Coastal Sea Bridge Express', 'Scenic route cruising over coastal waters and bridges linking Mumbai, Pune, and coastal hubs.')">
+            <div class="fleet-card-img-wrap">
+              <img src="images/scenic_railway.jpg" alt="Coastal Rail Express" class="fleet-card-img" />
+              <div class="fleet-card-badge">SCENIC CORRIDOR</div>
+            </div>
+            <div class="fleet-card-info">
+              <h4>Konkan & Coastal Ocean Rails</h4>
+              <p>Stunning coastal track lines navigating seaside viaducts with dynamic tariff calculation.</p>
+              <div class="fleet-card-stats">
+                <span>🌊 Ocean Viaduct</span>
+                <span>₹1.35 / km Base</span>
+                <span>🛡️ FIFO WL Queue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="fleetMatrixTable">
+            <thead>
+              <tr>
+                <th>Train#</th>
+                <th>Express Train Name</th>
+                <th>Origin Junction</th>
+                <th>Destination Junction</th>
+                <th>Intermediate Route Stops</th>
+                <th>Capacity</th>
+                <th>Available Seats</th>
+                <th>Waiting List Queue</th>
+                <th>Base Fare/km</th>
+              </tr>
+            </thead>
+            <tbody id="fleetTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: MY BOOKINGS PORTFOLIO -->
+    <section id="pane-my-bookings" class="tab-pane">
+      <div class="glass-card">
+        <div class="card-head">
+          <h3 class="card-title"><span>📋</span> Personal Booking Portfolio & Tickets</h3>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="myBookingsAccountBadge" style="font-size: 0.85rem; color: #94a3b8;"></span>
+            <button class="btn-secondary" style="padding: 6px 14px; font-size: 0.82rem;" onclick="fetchMyBookings()">🔄 Refresh</button>
+            <button class="btn-royal" style="padding: 6px 14px; font-size: 0.82rem;" onclick="switchTab('booking')"><span>+ Book New Journey</span></button>
+          </div>
+        </div>
+
+        <!-- Not Logged In Prompt -->
+        <div id="myBookingsAuthRequired" style="display:none; text-align: center; padding: 48px 24px; background: rgba(0,0,0,0.25); border-radius: 14px; border: 1px dashed rgba(212,175,55,0.25);">
+          <div style="font-size: 3rem; margin-bottom: 12px;">🔒</div>
+          <h3 style="font-family: var(--font-serif); color: var(--gold-light); font-size: 1.6rem; margin-bottom: 8px;">Sign In to View Your Bookings</h3>
+          <p style="color: #94a3b8; max-width: 520px; margin: 0 auto 24px auto; font-size: 0.92rem; line-height: 1.6;">
+            Sign in with your passenger account to track all confirmed seats, view waiting list movements, access digital boarding passes, or manage cancellations.
+          </p>
+          <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; align-items: center;">
+            <button class="btn-google-auth" style="width: auto; padding: 10px 22px; margin: 0;" onclick="openGoogleAccountChooser()">
+              <svg class="google-svg" viewBox="0 0 24 24" width="18" height="18">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.97 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+            <button class="btn-royal" style="width: auto; padding: 10px 24px;" onclick="openAuthModal('login')"><span>Sign In with Password</span> ➔</button>
+            <button class="btn-secondary" style="width: auto; padding: 10px 20px;" onclick="quickDemoLogin('passenger')">⚡ Demo: Aarav</button>
+          </div>
+        </div>
+
+        <!-- Logged In Bookings View -->
+        <div id="myBookingsContent" style="display:none;">
+          <!-- Empty State -->
+          <div id="myBookingsEmpty" style="display:none; text-align: center; padding: 48px 20px;">
+            <div style="font-size: 2.8rem; margin-bottom: 12px;">🎟️</div>
+            <h4 style="color: var(--gold-light); font-size: 1.3rem; margin-bottom: 6px;">No Tickets Booked Yet</h4>
+            <p style="color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem;">You haven't reserved any train journeys under this account yet.</p>
+            <button class="btn-royal" style="width: auto; margin: 0 auto; padding: 10px 24px;" onclick="switchTab('booking')"><span>Book Your First Train</span> ➔</button>
+          </div>
+
+          <!-- Cards Grid -->
+          <div class="my-bookings-grid" id="myBookingsList"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Interactive Station Drawer -->
+  <div class="station-drawer" id="stationDrawer">
+    <button class="drawer-close-btn" onclick="closeStationDrawer()">✕</button>
+    <div style="font-size: 0.75rem; color: var(--gold-light); font-family: var(--font-mono); margin-bottom: 6px;">JUNCTION DETAILS</div>
+    <h2 id="drawerStationName" style="color: #fff; font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 4px;">Station Name</h2>
+    <span class="seat-status-pill seat-cnf" id="drawerStationCode" style="margin-bottom: 20px;">NDLS</span>
+
+    <div style="margin-bottom: 24px;">
+      <h4 style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px;">Direct Connected Tracks</h4>
+      <div id="drawerConnectionsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <h4 style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px;">Departing Trains</h4>
+      <div id="drawerDeparturesList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <button class="btn-royal" style="padding: 10px; font-size: 0.85rem;" onclick="setDrawerStationAs('origin')">Set as Origin</button>
+      <button class="btn-royal" style="padding: 10px; font-size: 0.85rem;" onclick="setDrawerStationAs('dest')">Set as Dest</button>
+    </div>
+  </div>
+
+  <!-- Floating Admin Hub Trigger & Modal -->
+  <div class="floating-admin-trigger" onclick="toggleAdminModal()">
+    <span>⚙️</span> Railway Admin Hub
+  </div>
+
+  <div id="adminModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:300; backdrop-filter:blur(10px); align-items:center; justify-content:center;">
+    <div class="glass-card" style="width: 500px; max-width: 90%; max-height: 90vh; overflow-y:auto;">
+      <div class="card-head">
+        <h3 class="card-title"><span>🛠️</span> Railway Administrator Hub</h3>
+        <button class="drawer-close-btn" style="position:static;" onclick="toggleAdminModal()">✕</button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label>Add New Railway Station</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="adminStCode" placeholder="Code (e.g. BSB)" style="width: 120px;" />
+          <input type="text" id="adminStName" placeholder="Full Name (e.g. Varanasi Jn)" />
+        </div>
+        <button class="btn-secondary" onclick="adminAddStation()">+ Add Station</button>
+      </div>
+
+      <div style="margin-bottom: 20px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 16px;">
+        <label>Add New Track Connection</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+          <input type="text" id="adminTrackSrc" placeholder="Src (NDLS)" />
+          <input type="text" id="adminTrackDst" placeholder="Dst (BSB)" />
+          <input type="number" id="adminTrackDist" placeholder="Dist (km)" />
+        </div>
+        <button class="btn-secondary" onclick="adminAddTrack()">+ Connect Track</button>
+      </div>
+
+      <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 16px;">
+        <label>Quick Simulation Actions</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button class="btn-royal" style="padding: 10px; font-size: 0.8rem;" onclick="adminSimulateBooking()">🎟️ Auto-Book Ticket</button>
+          <button class="btn-secondary btn-danger" style="padding: 10px; font-size: 0.8rem;" onclick="adminSimulateCancel()">❌ Auto-Cancel & Promote</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastBox"></div>
+
+  <!-- User Authentication Modal (Sign In / Register / Quick Demo) -->
+  <div class="auth-modal-backdrop" id="authModal" onclick="closeAuthModal(event)">
+    <div class="auth-modal-dialog" onclick="event.stopPropagation()">
+      <button class="auth-modal-close" onclick="closeAuthModal()">&times;</button>
+      
+      <!-- Modal Header -->
+      <div class="auth-modal-header">
+        <div class="auth-modal-logo">🚆</div>
+        <h3 class="auth-modal-title">Bharat Rail Identity</h3>
+        <p class="auth-modal-subtitle">Unified Indian Railways Passenger & Admin Access</p>
+      </div>
+
+      <!-- Quick Demo Access Bar -->
+      <div class="auth-quick-bar">
+        <div class="auth-quick-label">⚡ 1-CLICK DEMO ACCESS</div>
+        <div class="auth-quick-chips">
+          <button class="btn-quick-chip" onclick="quickDemoLogin('passenger')">
+            <span>👤</span>
+            <strong>Aarav Sharma</strong>
+            <small>Passenger</small>
+          </button>
+          <button class="btn-quick-chip" onclick="quickDemoLogin('royal')">
+            <span>👑</span>
+            <strong>Gayatri Devi</strong>
+            <small>Royal VIP</small>
+          </button>
+          <button class="btn-quick-chip" onclick="quickDemoLogin('admin')">
+            <span>🛡️</span>
+            <strong>Administrator</strong>
+            <small>Admin</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Google Authentication Action Button -->
+      <button type="button" class="btn-google-auth" id="googleAuthBtn" onclick="openGoogleAccountChooser()">
+        <svg class="google-svg" viewBox="0 0 24 24" width="20" height="20">
+          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"/>
+          <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.97 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+        </svg>
+        <span>Sign in with Google</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>or sign in with password</span>
+      </div>
+
+      <!-- Tabs: Sign In vs Register -->
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="authTabLogin" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab-btn" id="authTabRegister" onclick="switchAuthTab('register')">Create Account</button>
+      </div>
+
+      <!-- Alert / Status message -->
+      <div id="authAlert" class="auth-alert-box" style="display:none;"></div>
+
+      <!-- Sign In Form -->
+      <form id="authLoginForm" onsubmit="submitLoginForm(event)">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="loginUsername" placeholder="e.g. passenger or admin" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn-royal" style="width:100%; padding: 12px; margin-top: 10px;" id="loginSubmitBtn">
+          <span>Sign In to Bharat Rail</span> ➔
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="authRegisterForm" style="display:none;" onsubmit="submitRegisterForm(event)">
+        <div class="form-group">
+          <label>Full Legal Name</label>
+          <input type="text" id="regFullName" placeholder="e.g. Priya Venkatesh" required />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="regUsername" placeholder="Unique username" required autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="regPassword" placeholder="Min 4 characters" minlength="4" required autocomplete="new-password" />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="regEmail" placeholder="name@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" id="regPhone" placeholder="+91 98765 43210" />
+          </div>
+        </div>
+        <button type="submit" class="btn-royal" style="width:100%; padding: 12px; margin-top: 10px;" id="regSubmitBtn">
+          <span>Complete Registration</span> ➔
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Google Account Chooser Modal (Google Identity Services) -->
+  <div class="google-chooser-backdrop" id="googleChooserModal" onclick="closeGoogleChooser(event)">
+    <div class="google-chooser-card" onclick="event.stopPropagation()">
+      <div class="google-chooser-header">
+        <svg viewBox="0 0 24 24" width="32" height="32">
+          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"/>
+          <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.97 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+        </svg>
+        <h3 class="google-chooser-title">Choose an account</h3>
+        <p class="google-chooser-sub">to continue to <strong>Bharat Railways</strong></p>
+      </div>
+
+      <div class="google-account-list">
+        <!-- Account 1: Kushal Sindhe -->
+        <div class="google-account-item" onclick="executeGoogleLogin('kushal.sindhe@gmail.com', 'Kushal Sindhe', 'google_101', 'https://lh3.googleusercontent.com/a/ACg8ocKS')">
+          <div class="google-avatar-circle" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">KS</div>
+          <div class="google-acc-details">
+            <div class="google-acc-name">Kushal Sindhe</div>
+            <div class="google-acc-email">kushal.sindhe@gmail.com</div>
+          </div>
+        </div>
+
+        <!-- Account 2: Aarav Sharma -->
+        <div class="google-account-item" onclick="executeGoogleLogin('aarav.sharma@gmail.com', 'Aarav Sharma', 'google_102', 'https://lh3.googleusercontent.com/a/ACg8ocAS')">
+          <div class="google-avatar-circle" style="background: linear-gradient(135deg, #0d9488, #059669);">AS</div>
+          <div class="google-acc-details">
+            <div class="google-acc-name">Aarav Sharma</div>
+            <div class="google-acc-email">aarav.sharma@gmail.com</div>
+          </div>
+        </div>
+
+        <!-- Account 3: Priya Patel -->
+        <div class="google-account-item" onclick="executeGoogleLogin('priya.patel@gmail.com', 'Priya Patel', 'google_103', 'https://lh3.googleusercontent.com/a/ACg8ocPP')">
+          <div class="google-avatar-circle" style="background: linear-gradient(135deg, #ea580c, #d97706);">PP</div>
+          <div class="google-acc-details">
+            <div class="google-acc-name">Priya Patel</div>
+            <div class="google-acc-email">priya.patel@gmail.com</div>
+          </div>
+        </div>
+
+        <!-- Option: Use another account -->
+        <div class="google-account-item" onclick="toggleCustomGoogleBox()">
+          <div class="google-avatar-circle" style="background: #f1f3f4; color: #5f6368; font-size: 1.2rem;">＋</div>
+          <div class="google-acc-details">
+            <div class="google-acc-name">Use another Google account</div>
+            <div class="google-acc-email">Sign in with any Gmail / Google Workspace account</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Google Account Input Box (Hidden by default) -->
+      <div class="google-chooser-custom-box" id="googleCustomBox">
+        <form onsubmit="submitCustomGoogleLogin(event)">
+          <div style="margin-bottom: 10px;">
+            <label style="display:block; font-size: 0.8rem; color: #3c4043; font-weight: 500; margin-bottom: 4px;">Google Email Address</label>
+            <input type="email" id="customGoogleEmail" placeholder="your.name@gmail.com" required style="width:100%; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 0.9rem; color:#202124;" />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display:block; font-size: 0.8rem; color: #3c4043; font-weight: 500; margin-bottom: 4px;">Full Name</label>
+            <input type="text" id="customGoogleName" placeholder="Your Full Name" required style="width:100%; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 0.9rem; color:#202124;" />
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn-secondary" style="padding: 6px 14px; font-size: 0.82rem; color: #5f6368;" onclick="toggleCustomGoogleBox()">Cancel</button>
+            <button type="submit" class="btn-royal" style="width:auto; padding: 6px 16px; font-size: 0.82rem; background: #1a73e8; border-color: #1a73e8; color: #fff;">Continue ➔</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="google-chooser-footer">
+        <span>To continue, Google will share your name and email with Bharat Railways.</span>
+        <button class="google-chooser-cancel" onclick="closeGoogleChooser()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- High-Resolution Image Lightbox Modal -->
+  <div class="image-lightbox-modal" id="imageLightbox" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close-btn" onclick="closeLightbox()">&times;</button>
+      <img id="lightboxImg" src="" alt="High Resolution Railway View" class="lightbox-main-img" />
+      <div class="lightbox-info">
+        <h3 id="lightboxTitle"></h3>
+        <p id="lightboxCaption"></p>
+        <div class="lightbox-actions">
+          <a class="btn-royal" id="lightboxDownloadBtn" download href="#" target="_blank" style="width:auto; padding:8px 18px; font-size:0.85rem;">Download HD Wallpaper 📥</a>
+          <button class="btn-secondary" style="width:auto; padding:8px 16px; font-size:0.85rem;" onclick="closeLightbox()">Close View ✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Royal Footer -->
+  <footer>
+    <div>
+      <strong>BHARAT RAILWAYS RESERVATION & ROUTE MANAGEMENT SYSTEM</strong>
+      <p style="font-size: 0.78rem; margin-top: 4px;">Crafted with Core Java 21 • Zero External Dependencies • 100-Mark Assessment Suite</p>
+    </div>
+    <div style="display: flex; gap: 16px;">
+      <a href="javascript:void(0)" style="color:var(--gold-light); text-decoration:none;" onclick="switchTab('route')">Live Map</a>
+      <a href="javascript:void(0)" style="color:var(--gold-light); text-decoration:none;" onclick="switchTab('booking')">Book Ticket</a>
+      <a href="javascript:void(0)" style="color:var(--gold-light); text-decoration:none;" onclick="switchTab('fleet')">Fleet</a>
+    </div>
+  </footer>
+
+  <!-- Dynamic Logic & Simulation Engine -->
+  <script>
+    // State
+    let stations = [];
+    let trains = [];
+    let tracks = [];
+    let soundEnabled = true;
+    let currentSlide = 0;
+    let selectedStationForDrawer = null;
+    let simSpeedMultiplier = 1; // 1x, 2x, 4x
+
+    // Auth & Identity State
+    let currentUser = null;
+    let currentUserToken = localStorage.getItem('railway_auth_token') || null;
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function initAuth() {
+      if (!currentUserToken) {
+        renderLoggedOutHeader();
+        updateMyBookingsView();
+        return;
+      }
+      try {
+        const res = await fetch(`/api/auth/me?token=${encodeURIComponent(currentUserToken)}`);
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          currentUser = data.user;
+          renderLoggedInHeader(data.user, data.bookingCount || 0);
+          autoPrefillPassengerName();
+          updateMyBookingsView();
+        } else {
+          localStorage.removeItem('railway_auth_token');
+          currentUserToken = null;
+          currentUser = null;
+          renderLoggedOutHeader();
+          updateMyBookingsView();
+        }
+      } catch (e) {
+        renderLoggedOutHeader();
+        updateMyBookingsView();
+      }
+    }
+
+    function renderLoggedInHeader(user, bookingCount = 0) {
+      const container = document.getElementById('authHeaderContainer');
+      if (!container) return;
+      const isAdmin = user.role === 'ADMIN';
+      const isGoogle = user.authProvider === 'google';
+      const roleClass = isAdmin ? 'admin' : (isGoogle ? 'google' : 'passenger');
+      const avatarIcon = isGoogle 
+        ? `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.97 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>`
+        : (isAdmin ? '🛡️' : (user.username === 'royal' ? '👑' : '👤'));
+      const roleLabel = isGoogle ? 'Google' : user.role;
+
+      container.innerHTML = `
+        <div class="user-profile-chip">
+          <div class="user-avatar-circle ${roleClass}">${avatarIcon}</div>
+          <div class="user-meta-col">
+            <span class="user-name-text" title="${escapeHtml(user.fullName)}">${escapeHtml(user.fullName)}</span>
+            <span class="user-role-tag ${roleClass}">${roleLabel}</span>
+          </div>
+          <button class="user-btn-bookings" onclick="switchTab('my-bookings')" title="View Personal Bookings">
+            <span>Bookings</span>
+            <span class="user-badge-count" id="headerBookingCount">${bookingCount}</span>
+          </button>
+          <button class="user-btn-logout" onclick="performLogout()" title="Sign Out">🚪</button>
+        </div>
+      `;
+
+      const navBadge = document.getElementById('navMyBookingsBadge');
+      if (navBadge) {
+        navBadge.textContent = bookingCount;
+        navBadge.style.display = bookingCount > 0 ? 'inline-block' : 'none';
+      }
+    }
+
+    function renderLoggedOutHeader() {
+      const container = document.getElementById('authHeaderContainer');
+      if (!container) return;
+      container.innerHTML = `
+        <button class="btn-royal" style="padding: 6px 14px; font-size: 0.82rem;" onclick="openAuthModal('login')">
+          <span>🔒 Sign In / Register</span>
+        </button>
+      `;
+      const navBadge = document.getElementById('navMyBookingsBadge');
+      if (navBadge) navBadge.style.display = 'none';
+    }
+
+    function autoPrefillPassengerName() {
+      if (currentUser && currentUser.fullName) {
+        const passNameInput = document.getElementById('passName');
+        if (passNameInput && (!passNameInput.value || passNameInput.value === 'Aarav Sharma')) {
+          passNameInput.value = currentUser.fullName;
+        }
+      }
+    }
+
+    function openAuthModal(tab = 'login') {
+      const modal = document.getElementById('authModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        switchAuthTab(tab);
+        clearAuthAlert();
+      }
+    }
+
+    function closeAuthModal(e) {
+      if (e && e.target && e.target.id !== 'authModal' && !e.target.classList.contains('auth-modal-close')) return;
+      const modal = document.getElementById('authModal');
+      if (modal) modal.style.display = 'none';
+      clearAuthAlert();
+    }
+
+    /* Google Authentication & Google Identity Services (GIS) */
+    // Optional: Paste your Google Cloud OAuth 2.0 Client ID below to enable live Google One Tap:
+    const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+
+    function initGoogleIdentityServices() {
+      if (typeof google !== 'undefined' && google.accounts && GOOGLE_CLIENT_ID !== "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com") {
+        try {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false
+          });
+          google.accounts.id.prompt();
+        } catch (e) {
+          console.log('Google Identity Services running in fallback mode:', e);
+        }
+      }
+    }
+
+    function handleGoogleCredentialResponse(response) {
+      if (!response || !response.credential) return;
+      try {
+        const base64Url = response.credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        const payload = JSON.parse(jsonPayload);
+        executeGoogleLogin(payload.email, payload.name, payload.sub, payload.picture || '');
+      } catch (err) {
+        console.error('Error parsing Google credential:', err);
+      }
+    }
+
+    /* Google Account Chooser & Auth Functions */
+    function openGoogleAccountChooser() {
+      if (typeof google !== 'undefined' && google.accounts && GOOGLE_CLIENT_ID !== "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com") {
+        try {
+          google.accounts.id.prompt();
+          return;
+        } catch (e) {}
+      }
+      const authModal = document.getElementById('authModal');
+      if (authModal) authModal.style.display = 'none';
+      const chooser = document.getElementById('googleChooserModal');
+      if (chooser) chooser.style.display = 'flex';
+      const customBox = document.getElementById('googleCustomBox');
+      if (customBox) customBox.style.display = 'none';
+    }
+
+    function closeGoogleChooser(e) {
+      if (e && e.target && e.target.id !== 'googleChooserModal' && !e.target.classList.contains('google-chooser-cancel')) return;
+      const chooser = document.getElementById('googleChooserModal');
+      if (chooser) chooser.style.display = 'none';
+    }
+
+    function toggleCustomGoogleBox() {
+      const customBox = document.getElementById('googleCustomBox');
+      if (!customBox) return;
+      const isVisible = customBox.style.display === 'block';
+      customBox.style.display = isVisible ? 'none' : 'block';
+      if (!isVisible) {
+        const inp = document.getElementById('customGoogleEmail');
+        if (inp) inp.focus();
+      }
+    }
+
+    async function submitCustomGoogleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('customGoogleEmail').value.trim();
+      const name = document.getElementById('customGoogleName').value.trim();
+      if (!email || !name) return;
+      await executeGoogleLogin(email, name, 'google_custom_' + Date.now(), '');
+    }
+
+    async function executeGoogleLogin(email, name, googleId = '', avatarUrl = '') {
+      showToast(`Signing in via Google (${email})...`);
+      try {
+        const body = `email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&googleId=${encodeURIComponent(googleId)}&avatarUrl=${encodeURIComponent(avatarUrl)}`;
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          currentUserToken = data.token;
+          currentUser = data.user;
+          localStorage.setItem('railway_auth_token', currentUserToken);
+          closeGoogleChooser();
+          closeAuthModal();
+          showToast(`Signed in with Google as ${data.user.fullName}!`, true);
+          playChime('success');
+          autoPrefillPassengerName();
+          initAuth();
+          if (document.getElementById('pane-my-bookings').classList.contains('active')) {
+            fetchMyBookings();
+          }
+        } else {
+          alert('Google Sign-In failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Network error during Google Sign-In: ' + err.message);
+      }
+    }
+
+    function switchAuthTab(tab) {
+      const tabLogin = document.getElementById('authTabLogin');
+      const tabReg = document.getElementById('authTabRegister');
+      const formLogin = document.getElementById('authLoginForm');
+      const formReg = document.getElementById('authRegisterForm');
+
+      clearAuthAlert();
+      if (tab === 'register') {
+        tabLogin.classList.remove('active');
+        tabReg.classList.add('active');
+        formLogin.style.display = 'none';
+        formReg.style.display = 'block';
+      } else {
+        tabReg.classList.remove('active');
+        tabLogin.classList.add('active');
+        formReg.style.display = 'none';
+        formLogin.style.display = 'block';
+      }
+    }
+
+    function showAuthAlert(msg, isError = true) {
+      const alertBox = document.getElementById('authAlert');
+      if (!alertBox) return;
+      alertBox.className = `auth-alert-box ${isError ? 'error' : 'success'}`;
+      alertBox.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <div>${escapeHtml(msg)}</div>`;
+      alertBox.style.display = 'flex';
+    }
+
+    function clearAuthAlert() {
+      const alertBox = document.getElementById('authAlert');
+      if (alertBox) alertBox.style.display = 'none';
+    }
+
+    async function quickDemoLogin(demoType) {
+      let username = 'passenger';
+      let password = 'pass123';
+      if (demoType === 'royal') {
+        username = 'royal';
+        password = 'royal123';
+      } else if (demoType === 'admin') {
+        username = 'admin';
+        password = 'admin123';
+      }
+      openAuthModal('login');
+      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginPassword').value = password;
+      await executeLogin(username, password);
+    }
+
+    async function submitLoginForm(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      await executeLogin(username, password);
+    }
+
+    async function executeLogin(username, password) {
+      const submitBtn = document.getElementById('loginSubmitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Verifying credentials...</span> ⏳';
+      }
+      try {
+        const body = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+        const res = await fetch('/api/auth/login', { method: 'POST', body });
+        const data = await res.json();
+        if (data.success && data.token) {
+          currentUserToken = data.token;
+          currentUser = data.user;
+          localStorage.setItem('railway_auth_token', currentUserToken);
+          showAuthAlert(`Welcome back, ${data.user.fullName}!`, false);
+          showToast(`Signed in as ${data.user.fullName} (${data.user.role})`, true);
+          playChime('success');
+          autoPrefillPassengerName();
+          setTimeout(() => {
+            closeAuthModal();
+            initAuth();
+            if (document.getElementById('pane-my-bookings').classList.contains('active')) {
+              fetchMyBookings();
+            }
+          }, 600);
+        } else {
+          showAuthAlert(data.error || 'Invalid credentials. Please check your username and password.');
+        }
+      } catch (err) {
+        showAuthAlert('Network error: ' + err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Sign In to Bharat Rail</span> ➔';
+        }
+      }
+    }
+
+    async function submitRegisterForm(e) {
+      e.preventDefault();
+      const fullName = document.getElementById('regFullName').value.trim();
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+
+      const submitBtn = document.getElementById('regSubmitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Registering identity...</span> ⏳';
+      }
+      try {
+        const body = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&fullName=${encodeURIComponent(fullName)}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`;
+        const res = await fetch('/api/auth/register', { method: 'POST', body });
+        const data = await res.json();
+        if (data.success && data.token) {
+          currentUserToken = data.token;
+          currentUser = data.user;
+          localStorage.setItem('railway_auth_token', currentUserToken);
+          showAuthAlert(`Account created successfully! Welcome, ${data.user.fullName}.`, false);
+          showToast(`Account Created for ${data.user.fullName}!`, true);
+          playChime('success');
+          autoPrefillPassengerName();
+          setTimeout(() => {
+            closeAuthModal();
+            initAuth();
+          }, 800);
+        } else {
+          showAuthAlert(data.error || 'Registration failed.');
+        }
+      } catch (err) {
+        showAuthAlert('Network error: ' + err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Complete Registration</span> ➔';
+        }
+      }
+    }
+
+    async function performLogout() {
+      if (currentUserToken) {
+        try {
+          await fetch(`/api/auth/logout?token=${encodeURIComponent(currentUserToken)}`);
+        } catch (e) {}
+      }
+      localStorage.removeItem('railway_auth_token');
+      currentUserToken = null;
+      currentUser = null;
+      renderLoggedOutHeader();
+      updateMyBookingsView();
+      showToast('Signed out successfully');
+    }
+
+    function updateMyBookingsView() {
+      const authReqBox = document.getElementById('myBookingsAuthRequired');
+      const contentBox = document.getElementById('myBookingsContent');
+      const badge = document.getElementById('myBookingsAccountBadge');
+
+      if (!currentUser) {
+        if (authReqBox) authReqBox.style.display = 'block';
+        if (contentBox) contentBox.style.display = 'none';
+        if (badge) badge.textContent = 'Guest Mode (Unauthenticated)';
+      } else {
+        if (authReqBox) authReqBox.style.display = 'none';
+        if (contentBox) contentBox.style.display = 'block';
+        if (badge) badge.textContent = `Signed in as @${currentUser.username} (${currentUser.fullName})`;
+      }
+    }
+
+    async function fetchMyBookings() {
+      updateMyBookingsView();
+      if (!currentUserToken) return;
+
+      const listEl = document.getElementById('myBookingsList');
+      const emptyEl = document.getElementById('myBookingsEmpty');
+      if (!listEl) return;
+
+      try {
+        const res = await fetch(`/api/auth/my-bookings?token=${encodeURIComponent(currentUserToken)}`);
+        const data = await res.json();
+        if (data.success && data.bookings) {
+          const count = data.bookings.length;
+          const headerCount = document.getElementById('headerBookingCount');
+          if (headerCount) headerCount.textContent = count;
+          const navBadge = document.getElementById('navMyBookingsBadge');
+          if (navBadge) {
+            navBadge.textContent = count;
+            navBadge.style.display = count > 0 ? 'inline-block' : 'none';
+          }
+
+          if (count === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            listEl.innerHTML = '';
+          } else {
+            if (emptyEl) emptyEl.style.display = 'none';
+            listEl.innerHTML = data.bookings.map(b => renderBookingTicketCard(b)).join('');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch personal bookings:', err);
+      }
+    }
+
+    function renderBookingTicketCard(b) {
+      const isConfirmed = b.status === 'CONFIRMED';
+      const statusPill = isConfirmed
+        ? `<span class="seat-status-pill seat-cnf">CONFIRMED (CNF)</span>`
+        : (b.status === 'WAITING_LIST'
+            ? `<span class="seat-status-pill seat-wl">WAITING LIST (WL-${b.wl})</span>`
+            : `<span class="seat-status-pill seat-wl" style="background:#ef4444; color:#fff;">CANCELLED</span>`);
+
+      const seatText = isConfirmed
+        ? `Seat #${b.seat}`
+        : (b.status === 'WAITING_LIST' ? `Waitlist Position WL-${b.wl}` : 'Seat Released');
+
+      return `
+        <div class="booking-ticket-card">
+          <div class="booking-card-top">
+            <div>
+              <span class="booking-pnr-tag">PNR: ${b.pnr}</span>
+              <div style="font-weight:700; color:#f8fafc; font-size:0.95rem; margin-top:4px;">${escapeHtml(b.trainName)}</div>
+              <div style="font-size:0.75rem; color:#94a3b8;">Train #${b.trainId}</div>
+            </div>
+            <div>${statusPill}</div>
+          </div>
+
+          <div class="booking-card-route">
+            <div class="booking-station-col">
+              <span class="booking-station-code">${b.from}</span>
+              <span class="booking-station-label">Origin</span>
+            </div>
+            <div class="booking-route-arrow">➔</div>
+            <div class="booking-station-col" style="text-align:right;">
+              <span class="booking-station-code">${b.to}</span>
+              <span class="booking-station-label">Destination</span>
+            </div>
+          </div>
+
+          <div class="booking-details-grid">
+            <div class="booking-detail-item">
+              <span>Passenger</span>
+              <strong>${escapeHtml(b.passenger)}</strong>
+            </div>
+            <div class="booking-detail-item">
+              <span>Travel Class</span>
+              <strong style="color:var(--gold-light);">${escapeHtml(b.class || '3 Tier AC')}</strong>
+            </div>
+            <div class="booking-detail-item">
+              <span>Allocation</span>
+              <strong>${seatText}</strong>
+            </div>
+            <div class="booking-detail-item">
+              <span>Total Fare</span>
+              <strong style="color:#34d399;">₹${b.fare.toFixed(2)}</strong>
+            </div>
+          </div>
+
+          <div class="booking-card-actions">
+            <button class="btn-royal" style="flex:1; padding:6px 12px; font-size:0.8rem;" onclick="viewMyBookingPass('${b.pnr}')">
+              <span>View Boarding Pass</span> 🎫
+            </button>
+            ${b.status !== 'CANCELLED' ? `
+            <button class="btn-secondary btn-danger" style="padding:6px 12px; font-size:0.8rem;" onclick="cancelMyBooking('${b.pnr}')" title="Cancel this ticket">
+              Cancel ❌
+            </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    async function viewMyBookingPass(pnr) {
+      switchTab('pnr');
+      const input = document.getElementById('pnrQueryInput');
+      if (input) {
+        input.value = pnr;
+        await queryPnrStatus();
+      }
+    }
+
+    async function cancelMyBooking(pnr) {
+      if (!confirm(`Are you sure you want to cancel ticket with PNR: ${pnr}?\n\nIf confirmed, any waiting list passengers will be automatically promoted via the FIFO queue algorithm.`)) {
+        return;
+      }
+      try {
+        const res = await fetch('/api/cancel', {
+          method: 'POST',
+          body: `pnr=${encodeURIComponent(pnr)}`
+        });
+        const data = await res.json();
+        if (data.success) {
+          playChime('cancel');
+          showToast(`Ticket ${pnr} cancelled. ${data.message}`, true);
+          await fetchMyBookings();
+          await loadData();
+        } else {
+          alert('Cancellation failed: ' + data.message);
+        }
+      } catch (e) {
+        alert('Network error: ' + e.message);
+      }
+    }
+
+    const themes = [
+      { name: "Alpine Viaduct Express", imgId: "slide-0", src: "images/hero_train.jpg", desc: "Aerodynamic high-speed bullet train curving across elevated mountain viaducts at golden hour." },
+      { name: "Grand Central Terminus", imgId: "slide-1", src: "images/grand_station.jpg", desc: "Opulent historic railway cathedral with soaring vaulted glass arches and illuminated departure halls." },
+      { name: "Executive Royal Saloon", imgId: "slide-2", src: "images/luxury_cabin.jpg", desc: "Royal first-class lounge cabin with panoramic alpine mountain views, leather armchairs, and champagne." },
+      { name: "Coastal Ocean Bridge", imgId: "slide-3", src: "images/scenic_railway.jpg", desc: "High-speed coastal express speeding over an azure sea viaduct beside rolling green cliffs." }
+    ];
+
+    // Station Coordinates on SVG Map (Geographically Proportional)
+    const stationCoordinates = {
+      'NDLS': { x: 380, y: 70,  name: 'New Delhi', code: 'NDLS' },
+      'ADI':  { x: 230, y: 190, name: 'Ahmedabad Junction', code: 'ADI' },
+      'BPL':  { x: 420, y: 180, name: 'Bhopal Junction', code: 'BPL' },
+      'NGP':  { x: 480, y: 250, name: 'Nagpur Junction', code: 'NGP' },
+      'CSMT': { x: 240, y: 290, name: 'Mumbai CSMT', code: 'CSMT' },
+      'PUNE': { x: 280, y: 320, name: 'Pune Junction', code: 'PUNE' },
+      'HYB':  { x: 470, y: 340, name: 'Hyderabad Deccan', code: 'HYB' },
+      'SBC':  { x: 440, y: 430, name: 'KSR Bengaluru', code: 'SBC' },
+      'MAS':  { x: 550, y: 410, name: 'Chennai Central', code: 'MAS' },
+      'HWH':  { x: 740, y: 200, name: 'Howrah (Kolkata)', code: 'HWH' }
+    };
+
+    // Simulated Active Trains Moving on Tracks
+    let activeSimTrains = [
+      { id: '12627', name: 'Karnataka Express', route: ['NDLS', 'BPL', 'NGP', 'HYB', 'SBC'], legIdx: 0, progress: 0.15, speed: 1.2, color: '#38bdf8' },
+      { id: '12952', name: 'Mumbai Rajdhani', route: ['NDLS', 'ADI', 'CSMT'], legIdx: 0, progress: 0.65, speed: 1.5, color: '#facc15' },
+      { id: '12008', name: 'Shatabdi Express', route: ['MAS', 'SBC'], legIdx: 0, progress: 0.4, speed: 1.3, color: '#34d399' },
+      { id: '12124', name: 'Deccan Queen', route: ['CSMT', 'PUNE'], legIdx: 0, progress: 0.8, speed: 1.1, color: '#f472b6' },
+      { id: '12840', name: 'Howrah Mail', route: ['MAS', 'HWH'], legIdx: 0, progress: 0.2, speed: 1.2, color: '#a78bfa' },
+      { id: '12724', name: 'Telangana Express', route: ['NDLS', 'BPL', 'NGP', 'HYB'], legIdx: 1, progress: 0.5, speed: 1.25, color: '#fb923c' }
+    ];
+
+    // Client-Side Web Audio Chime
+    function playChime(type = 'success') {
+      if (!soundEnabled) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'success') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1);
+          osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        } else if (type === 'cancel') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(330, now + 0.25);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundToggleBtn').textContent = soundEnabled ? '🔔' : '🔕';
+      showToast(soundEnabled ? 'Audio Chimes Enabled' : 'Audio Muted');
+    }
+
+    function toggleSimulationSpeed() {
+      if (simSpeedMultiplier === 1) simSpeedMultiplier = 2;
+      else if (simSpeedMultiplier === 2) simSpeedMultiplier = 4;
+      else simSpeedMultiplier = 1;
+      document.getElementById('simSpeedBtn').textContent = `⚡ ${simSpeedMultiplier}x`;
+      showToast(`Simulation Speed: ${simSpeedMultiplier}x`);
+    }
+
+    // Automatic Background Theme Slideshow (Cycles automatically every 9 seconds without manual controls)
+    function advanceAutomaticBackground() {
+      const prevSlide = currentSlide;
+      currentSlide = (currentSlide + 1) % themes.length;
+
+      const prevEl = document.getElementById(themes[prevSlide].imgId);
+      const nextEl = document.getElementById(themes[currentSlide].imgId);
+
+      if (prevEl) prevEl.classList.remove('active');
+      if (nextEl) nextEl.classList.add('active');
+    }
+
+    // Auto-advance scenic background wallpaper smoothly every 9 seconds
+    setInterval(advanceAutomaticBackground, 9000);
+
+    function openImageLightbox(src, title, caption) {
+      const modal = document.getElementById('imageLightbox');
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightboxTitle').textContent = title;
+      document.getElementById('lightboxCaption').textContent = caption;
+      const downloadBtn = document.getElementById('lightboxDownloadBtn');
+      if (downloadBtn) {
+        downloadBtn.href = src;
+        downloadBtn.download = src.split('/').pop();
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeLightbox(e) {
+      if (e && e.target && e.target.id !== 'imageLightbox' && !e.target.classList.contains('lightbox-close-btn')) return;
+      document.getElementById('imageLightbox').style.display = 'none';
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+
+      const pane = document.getElementById(`pane-${tabId}`);
+      if (pane) pane.classList.add('active');
+
+      const btn = Array.from(document.querySelectorAll('.tab-pill')).find(b => b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId));
+      if (btn) btn.classList.add('active');
+
+      if (tabId === 'route') {
+        setTimeout(renderNetworkGraph, 100);
+      } else if (tabId === 'my-bookings') {
+        fetchMyBookings();
+      }
+    }
+
+    function showToast(msg, isGold = false) {
+      const box = document.getElementById('toastBox');
+      const toast = document.createElement('div');
+      toast.className = 'luxury-toast';
+      toast.innerHTML = `<span>${isGold ? '⭐' : '🚆'}</span><div>${msg}</div>`;
+      box.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'all 0.5s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => toast.remove(), 500);
+      }, 3500);
+    }
+
+    // Data Sync & Polling
+    async function loadData() {
+      try {
+        const [resSt, resTr, resNet, resStats] = await Promise.all([
+          fetch('/api/stations').then(r => r.json()),
+          fetch('/api/trains').then(r => r.json()),
+          fetch('/api/network').then(r => r.json()).catch(() => null),
+          fetch('/api/stats').then(r => r.json()).catch(() => null)
+        ]);
+
+        stations = resSt;
+        trains = resTr;
+        if (resNet && resNet.tracks) tracks = resNet.tracks;
+
+        if (resStats) {
+          document.getElementById('statStations').textContent = resStats.stations;
+          document.getElementById('statTrains').textContent = resStats.trains;
+          document.getElementById('statSeats').textContent = resStats.totalSeats;
+          document.getElementById('statBookings').textContent = resStats.reservations;
+          document.getElementById('statWaitlist').textContent = resStats.waitlist;
+        }
+
+        populateDropdowns();
+        renderFleetTable();
+        onTravelClassChange();
+        renderNetworkGraph();
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
+    }
+
+    // Auto-Sync Polling every 4 seconds
+    setInterval(async () => {
+      try {
+        const [resTr, resStats] = await Promise.all([
+          fetch('/api/trains').then(r => r.json()),
+          fetch('/api/stats').then(r => r.json()).catch(() => null)
+        ]);
+        trains = resTr;
+        if (resStats) {
+          document.getElementById('statBookings').textContent = resStats.reservations;
+          document.getElementById('statWaitlist').textContent = resStats.waitlist;
+          document.getElementById('statSeats').textContent = resStats.totalSeats;
+        }
+        renderFleetTable();
+        document.getElementById('statSyncTime').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (e) {}
+    }, 4000);
+
+    function populateDropdowns() {
+      const bSrc = document.getElementById('bookSrc');
+      const bDst = document.getElementById('bookDst');
+      const dSrc = document.getElementById('dijkstraSrc');
+      const dDst = document.getElementById('dijkstraDst');
+
+      const prevBSrc = bSrc.value;
+      const prevBDst = bDst.value;
+      const prevDSrc = dSrc.value;
+      const prevDDst = dDst.value;
+
+      bSrc.innerHTML = ''; bDst.innerHTML = ''; dSrc.innerHTML = ''; dDst.innerHTML = '';
+
+      stations.forEach((s, idx) => {
+        bSrc.innerHTML += `<option value="${s.id}">${s.name} [${s.id}]</option>`;
+        bDst.innerHTML += `<option value="${s.id}" ${idx === 2 ? 'selected' : ''}>${s.name} [${s.id}]</option>`;
+        dSrc.innerHTML += `<option value="${s.id}">${s.name} [${s.id}]</option>`;
+        dDst.innerHTML += `<option value="${s.id}" ${idx === 2 ? 'selected' : ''}>${s.name} [${s.id}]</option>`;
+      });
+
+      if (prevBSrc) bSrc.value = prevBSrc;
+      if (prevBDst) bDst.value = prevBDst;
+      if (prevDSrc) dSrc.value = prevDSrc;
+      if (prevDDst) dDst.value = prevDDst;
+
+      populateTrainSelect();
+    }
+
+    function populateTrainSelect() {
+      const tSel = document.getElementById('bookTrainSelect');
+      const src = document.getElementById('bookSrc').value;
+      const dst = document.getElementById('bookDst').value;
+
+      tSel.innerHTML = '';
+      const matched = trains.filter(t => {
+        if (!t.stops || t.stops.length < 2) return t.from === src && t.to === dst;
+        const iSrc = t.stops.indexOf(src);
+        const iDst = t.stops.indexOf(dst);
+        return iSrc !== -1 && iDst !== -1 && iSrc < iDst;
+      });
+
+      const list = matched.length > 0 ? matched : trains;
+      list.forEach(t => {
+        const availText = t.available > 0 ? `CNF: ${t.available} seats` : `WL (${t.waitlist} queued)`;
+        tSel.innerHTML += `<option value="${t.id}">${t.name} (${t.id}) • ${t.from} ➔ ${t.to} [${availText}]</option>`;
+      });
+
+      updateBookingTrainPreview();
+    }
+
+    function onBookingStationChange() {
+      populateTrainSelect();
+      calculateRouteDistancePreview();
+    }
+
+    function swapBookingStations() {
+      const bSrc = document.getElementById('bookSrc');
+      const bDst = document.getElementById('bookDst');
+      const temp = bSrc.value;
+      bSrc.value = bDst.value;
+      bDst.value = temp;
+      onBookingStationChange();
+    }
+
+    function onTravelClassChange() {
+      const classSelect = document.getElementById('bookClassSelect');
+      const selectedOpt = classSelect ? classSelect.selectedOptions[0] : null;
+      if (!selectedOpt) return;
+
+      const className = selectedOpt.value;
+      const coach = selectedOpt.dataset.coach || 'Coach B1';
+      const coachType = selectedOpt.dataset.type || '';
+      const img = selectedOpt.dataset.img || 'images/hero_train.jpg';
+
+      // Update Visual Preview Banner
+      const bannerImg = document.getElementById('cabinVisualImg');
+      if (bannerImg) bannerImg.src = img;
+      const badgeClass = document.getElementById('cabinBadgeClass');
+      if (badgeClass) badgeClass.textContent = `★ ${className.toUpperCase()}`;
+      const badgeCoach = document.getElementById('cabinBadgeCoach');
+      if (badgeCoach) badgeCoach.textContent = coach.toUpperCase();
+      const titleEl = document.getElementById('cabinVisualTitle');
+      if (titleEl) titleEl.textContent = `${coach} - ${coachType}`;
+
+      // Update section label
+      const sectionLabel = document.getElementById('coachBerthSectionLabel');
+      if (sectionLabel) sectionLabel.textContent = `Select Berth in ${coach} (Click to Choose)`;
+
+      calculateRouteDistancePreview();
+      updateBookingTrainPreview();
+      showToast(`Selected Class: ${className} (${coach})`);
+    }
+
+    async function calculateRouteDistancePreview() {
+      const src = document.getElementById('bookSrc').value;
+      const dst = document.getElementById('bookDst').value;
+      const distEl = document.getElementById('previewDistance');
+      const totalEl = document.getElementById('previewTotalFare');
+      const rateEl = document.getElementById('previewRate');
+
+      const classSelect = document.getElementById('bookClassSelect');
+      const classMult = classSelect && classSelect.selectedOptions[0] ? parseFloat(classSelect.selectedOptions[0].dataset.mult || 1.25) : 1.25;
+      const className = classSelect ? classSelect.value : '3 Tier AC';
+
+      if (src === dst) {
+        distEl.textContent = '0 km';
+        totalEl.textContent = '₹0.00';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/route?src=${src}&dst=${dst}`);
+        const data = await res.json();
+        if (data.reachable) {
+          distEl.textContent = `${data.distance.toFixed(1)} km`;
+          const train = getSelectedTrain();
+          const baseRate = train ? train.farePerKm : 1.35;
+          const effectiveRate = baseRate * classMult;
+          const fare = Math.max(40.0, data.distance * effectiveRate);
+          totalEl.textContent = `₹${fare.toFixed(2)}`;
+          if (rateEl) rateEl.textContent = `₹${effectiveRate.toFixed(2)} / km (${className})`;
+        } else {
+          distEl.textContent = 'Via Junction';
+        }
+      } catch (e) {}
+    }
+
+    function getSelectedTrain() {
+      const id = document.getElementById('bookTrainSelect').value;
+      return trains.find(t => t.id === id);
+    }
+
+    function updateBookingTrainPreview() {
+      const t = getSelectedTrain();
+      if (!t) return;
+
+      const classSelect = document.getElementById('bookClassSelect');
+      const selectedClass = classSelect ? classSelect.value : '3 Tier AC';
+      const coachName = classSelect && classSelect.selectedOptions[0] ? classSelect.selectedOptions[0].dataset.coach : 'Coach B1';
+
+      document.getElementById('previewTrainName').textContent = `${t.name} (${t.id})`;
+      document.getElementById('previewRouteStops').textContent = `Route: ${t.from} ➔ ${t.to} (Intermediate: ${(t.stops || []).join(' ➔ ')})`;
+
+      const badge = document.getElementById('liveSeatBadge');
+      if (t.available > 0) {
+        badge.className = 'seat-status-pill seat-cnf';
+        badge.textContent = `AVAILABLE: ${t.available} / ${t.total} SEATS`;
+      } else {
+        badge.className = 'seat-status-pill seat-wl';
+        badge.textContent = `WAITING LIST: WL-${t.waitlist + 1}`;
+      }
+
+      // Render Interactive Coach Berth Layout customized by Class
+      const boxContainer = document.getElementById('coachPreviewBoxes');
+      boxContainer.innerHTML = '';
+      const bookedCount = t.total - t.available;
+
+      const berthTypesByClass = {
+        '1st Class': ['Coupe Lower', 'Coupe Upper', 'Cabin Lower', 'Cabin Upper', 'Window Coupe'],
+        '2nd Class': ['Lower Berth', 'Upper Berth', 'Side Lower', 'Side Upper', 'Lower Berth'],
+        '3 Tier AC': ['Lower Berth', 'Middle Berth', 'Upper Berth', 'Side Lower', 'Side Upper'],
+        'Sleeper': ['Lower Berth', 'Middle Berth', 'Upper Berth', 'Side Lower', 'Side Upper'],
+        'General': ['Window Seat', 'Middle Seat', 'Aisle Seat', 'Window Seat', 'Aisle Seat']
+      };
+      const berthLabels = berthTypesByClass[selectedClass] || berthTypesByClass['3 Tier AC'];
+
+      for (let i = 1; i <= t.total; i++) {
+        const isReserved = i <= bookedCount;
+        const box = document.createElement('div');
+        box.className = `seat-box ${isReserved ? 'reserved' : 'available'}`;
+        const bType = berthLabels[(i - 1) % berthLabels.length];
+        box.innerHTML = `<span>#${i}</span><span style="font-size:0.55rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:44px;">${isReserved ? 'RES' : bType.split(' ')[0]}</span>`;
+        box.title = `${coachName} Berth #${i}: ${bType} (${isReserved ? 'Reserved' : 'Available'})`;
+
+        if (!isReserved) {
+          box.onclick = () => {
+            document.querySelectorAll('.seat-box').forEach(b => b.classList.remove('selected'));
+            box.classList.add('selected');
+            document.getElementById('selectedBerthNote').innerHTML = `🎯 <strong>Preferred Berth Selected:</strong> ${coachName} • Seat #${i} (${bType} - ${selectedClass})`;
+            showToast(`${coachName} #${i} (${bType}) Selected!`);
+          };
+        }
+        boxContainer.appendChild(box);
+      }
+
+      calculateRouteDistancePreview();
+    }
+
+    async function executeBooking() {
+      const t = getSelectedTrain();
+      const name = document.getElementById('passName').value.trim();
+      const age = document.getElementById('passAge').value;
+      const gender = document.getElementById('passGender').value;
+      const src = document.getElementById('bookSrc').value;
+      const dst = document.getElementById('bookDst').value;
+      const classSelect = document.getElementById('bookClassSelect');
+      const travelClass = classSelect ? classSelect.value : '3 Tier AC';
+      const coachName = classSelect && classSelect.selectedOptions[0] ? classSelect.selectedOptions[0].dataset.coach : 'Coach B1';
+
+      if (!name) return alert('Please enter passenger full name.');
+
+      let body = `trainId=${t.id}&name=${encodeURIComponent(name)}&age=${age}&gender=${gender}&src=${src}&dst=${dst}&travelClass=${encodeURIComponent(travelClass)}`;
+      if (currentUserToken) {
+        body += `&token=${encodeURIComponent(currentUserToken)}`;
+      }
+
+      try {
+        const res = await fetch('/api/book', { method: 'POST', body });
+        const data = await res.json();
+
+        if (data.success) {
+          playChime('success');
+          showToast(`🎉 Booking Successful! PNR: ${data.pnr}`, true);
+
+          document.getElementById('digitalPass').style.display = 'block';
+          document.getElementById('passPnr').textContent = data.pnr;
+          document.getElementById('passPassengerName').textContent = data.passenger || name;
+          document.getElementById('passTrainDetails').textContent = `${data.trainName || t.name} (${t.id})`;
+          document.getElementById('passJourneyRoute').textContent = `${src} ➔ ${dst}`;
+
+          const bookedClass = data.travelClass || travelClass;
+          const classEl = document.getElementById('passClass');
+          if (classEl) classEl.textContent = bookedClass.toUpperCase();
+
+          const statusEl = document.getElementById('passStatus');
+          if (data.status === 'CONFIRMED') {
+            statusEl.innerHTML = `<span class="seat-status-pill seat-cnf">CONFIRMED (CNF)</span>`;
+            document.getElementById('passSeatNumber').textContent = `${coachName} • Seat #${data.seat}`;
+          } else {
+            statusEl.innerHTML = `<span class="seat-status-pill seat-wl">WAITING LIST (WL-${data.wl})</span>`;
+            document.getElementById('passSeatNumber').textContent = `${coachName} • Waitlist Position: WL-${data.wl}`;
+          }
+
+          document.getElementById('passFare').textContent = `₹${data.fare.toFixed(2)}`;
+          document.getElementById('passDate').textContent = new Date().toLocaleDateString('en-IN', {
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+
+          if (currentUserToken) {
+            initAuth();
+            if (document.getElementById('pane-my-bookings').classList.contains('active')) {
+              fetchMyBookings();
+            }
+          }
+
+          document.getElementById('digitalPass').scrollIntoView({ behavior: 'smooth' });
+          await loadData();
+        } else {
+          alert('Booking Error: ' + data.error);
+        }
+      } catch (e) {
+        alert('Failed to connect: ' + e.message);
+      }
+    }
+
+    async function queryPnrStatus() {
+      const pnr = document.getElementById('pnrQueryInput').value.trim().toUpperCase();
+      if (!pnr) return alert('Enter PNR Number.');
+
+      try {
+        const res = await fetch(`/api/pnr?pnr=${pnr}`);
+        const data = await res.json();
+        const out = document.getElementById('pnrStatusOutput');
+
+        if (!data.found) {
+          alert(`PNR ${pnr} not found.`);
+          out.style.display = 'none';
+          return;
+        }
+
+        out.style.display = 'block';
+        document.getElementById('outputPnrTag').textContent = data.pnr;
+        document.getElementById('outputPassenger').textContent = `Passenger: ${data.passenger}`;
+        document.getElementById('outputTrain').textContent = `Train: ${data.train}`;
+        const classInfo = data.travelClass ? ` • Class: ${data.travelClass}` : '';
+        document.getElementById('outputJourney').textContent = `Journey: ${data.from} ➔ ${data.to}${classInfo}`;
+        document.getElementById('outputFare').textContent = `₹${data.fare.toFixed(2)}`;
+
+        const badge = document.getElementById('outputStatusBadge');
+        if (data.status === 'CONFIRMED') {
+          badge.className = 'seat-status-pill seat-cnf';
+          badge.textContent = `CONFIRMED (Seat #${data.seat})`;
+        } else if (data.status === 'WAITING_LIST') {
+          badge.className = 'seat-status-pill seat-wl';
+          badge.textContent = `WAITING LIST (WL-${data.wl})`;
+        } else {
+          badge.className = 'seat-status-pill seat-can';
+          badge.textContent = 'CANCELLED';
+        }
+      } catch (e) {
+        alert('Error inquiring PNR: ' + e.message);
+      }
+    }
+
+    async function cancelCurrentTicket() {
+      const pnr = document.getElementById('pnrQueryInput').value.trim().toUpperCase();
+      if (!pnr) return alert('Enter PNR to cancel.');
+
+      if (!confirm(`Confirm cancellation of ticket ${pnr}?`)) return;
+
+      try {
+        const res = await fetch('/api/cancel', { method: 'POST', body: `pnr=${encodeURIComponent(pnr)}` });
+        const data = await res.json();
+
+        if (data.success) {
+          playChime('cancel');
+          if (data.promotedPnr) {
+            showToast(`⭐ AUTO-PROMOTION: Waitlist passenger ${data.promotedPnr} was promoted to CONFIRMED!`, true);
+          }
+          alert(data.message);
+          queryPnrStatus();
+          await loadData();
+        } else {
+          alert('Cancellation Failed: ' + data.message);
+        }
+      } catch (e) {
+        alert('Failed: ' + e.message);
+      }
+    }
+
+    function copyPnrToClipboard() {
+      const pnr = document.getElementById('passPnr').textContent;
+      navigator.clipboard.writeText(pnr);
+      showToast(`Copied ${pnr} to clipboard!`);
+    }
+
+    // Step-by-Step / Instant Dijkstra Pathfinding
+    async function executeDijkstra(stepByStep = false) {
+      const src = document.getElementById('dijkstraSrc').value;
+      const dst = document.getElementById('dijkstraDst').value;
+
+      if (src === dst) return alert('Origin and destination cannot be identical.');
+
+      try {
+        const res = await fetch(`/api/route?src=${src}&dst=${dst}`);
+        const data = await res.json();
+
+        const timeline = document.getElementById('routeTimeline');
+        const list = document.getElementById('timelineStepList');
+        list.innerHTML = '';
+
+        if (!data.reachable) {
+          timeline.style.display = 'block';
+          document.getElementById('routeDistanceText').textContent = 'No connected railway track found.';
+          return;
+        }
+
+        timeline.style.display = 'block';
+        document.getElementById('routeStatusHeading').textContent = stepByStep ? 'Step-by-Step Dijkstra Pathfinding' : 'Optimal Railway Corridor';
+        document.getElementById('routeDistanceText').innerHTML = `
+          Total Track Distance: <span style="color:var(--gold-light);">${data.distance.toFixed(1)} km</span> • 
+          Estimated Travel Time: <span style="color:#fde047;">${(data.distance / 95).toFixed(1)} hrs</span>
+        `;
+
+        data.path.forEach((p, idx) => {
+          const node = document.createElement('div');
+          node.className = 'timeline-node';
+          node.style.display = 'flex';
+          node.style.flexDirection = 'column';
+          node.style.alignItems = 'center';
+          node.style.gap = '4px';
+          node.style.minWidth = '75px';
+          node.innerHTML = `
+            <div style="width:26px; height:26px; border-radius:50%; background:rgba(212,175,55,0.25); border:1.5px solid var(--gold-primary); color:var(--gold-light); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem;">${idx + 1}</div>
+            <strong style="color:#fff; font-size:0.82rem;">${p.id}</strong>
+            <span style="font-size:0.68rem; color:#94a3b8; text-align:center;">${p.name}</span>
+          `;
+          list.appendChild(node);
+
+          if (idx < data.path.length - 1) {
+            const arr = document.createElement('div');
+            arr.style.color = 'var(--gold-primary)';
+            arr.textContent = '➔';
+            list.appendChild(arr);
+          }
+        });
+
+        if (stepByStep) {
+          animateDijkstraExploration(data.path.map(p => p.id));
+        } else {
+          highlightMapPath(data.path.map(p => p.id));
+          playChime('success');
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function onDijkstraStationChange() {
+      resetMapHighlight();
+    }
+
+    function resetMapHighlight() {
+      document.querySelectorAll('.track-line').forEach(l => {
+        l.classList.remove('highlighted');
+        l.classList.remove('exploring');
+      });
+      document.querySelectorAll('.station-node').forEach(n => n.classList.remove('active-route'));
+    }
+
+    // Interactive Step-by-Step Visualizer
+    async function animateDijkstraExploration(path) {
+      resetMapHighlight();
+      showToast('🎬 Starting step-by-step Dijkstra animation...');
+
+      for (let i = 0; i < path.length; i++) {
+        const stationCode = path[i];
+        const node = document.getElementById(`node-${stationCode}`);
+        if (node) node.classList.add('active-route');
+
+        if (i < path.length - 1) {
+          const u = path[i];
+          const v = path[i + 1];
+          let track = document.getElementById(`track-${u}-${v}`) || document.getElementById(`track-${v}-${u}`);
+          if (track) {
+            track.classList.add('exploring');
+            await new Promise(r => setTimeout(r, 400));
+            track.classList.remove('exploring');
+            track.classList.add('highlighted');
+          }
+        }
+        await new Promise(r => setTimeout(r, 300));
+      }
+      playChime('success');
+      showToast('✨ Shortest Path Found!');
+    }
+
+    function highlightMapPath(path) {
+      resetMapHighlight();
+      for (let i = 0; i < path.length; i++) {
+        const node = document.getElementById(`node-${path[i]}`);
+        if (node) node.classList.add('active-route');
+
+        if (i < path.length - 1) {
+          const u = path[i];
+          const v = path[i + 1];
+          let track = document.getElementById(`track-${u}-${v}`) || document.getElementById(`track-${v}-${u}`);
+          if (track) track.classList.add('highlighted');
+        }
+      }
+    }
+
+    // Render Network SVG Map & Start Moving Trains Animation Loop
+    function renderNetworkGraph() {
+      const svg = document.getElementById('networkSvg');
+      if (!svg) return;
+      svg.innerHTML = '';
+
+      // 1. Draw Track Lines
+      const defaultEdges = [
+        ['NDLS', 'BPL', 700], ['BPL', 'NGP', 390], ['NGP', 'HYB', 500], ['HYB', 'SBC', 620],
+        ['NDLS', 'ADI', 930], ['ADI', 'CSMT', 490], ['CSMT', 'PUNE', 190], ['PUNE', 'SBC', 840],
+        ['SBC', 'MAS', 360], ['NGP', 'HWH', 1120], ['MAS', 'HWH', 1660], ['BPL', 'CSMT', 830]
+      ];
+
+      defaultEdges.forEach(([u, v, dist]) => {
+        const p1 = stationCoordinates[u];
+        const p2 = stationCoordinates[v];
+        if (!p1 || !p2) return;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', p1.x);
+        line.setAttribute('y1', p1.y);
+        line.setAttribute('x2', p2.x);
+        line.setAttribute('y2', p2.y);
+        line.setAttribute('class', 'track-line');
+        line.setAttribute('id', `track-${u}-${v}`);
+        svg.appendChild(line);
+
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX);
+        text.setAttribute('y', midY - 4);
+        text.setAttribute('fill', 'rgba(212,175,55,0.6)');
+        text.setAttribute('font-size', '9');
+        text.setAttribute('text-anchor', 'middle');
+        text.textContent = `${dist} km`;
+        svg.appendChild(text);
+      });
+
+      // 2. Layer for Moving Trains
+      const trainLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      trainLayer.setAttribute('id', 'movingTrainLayer');
+      svg.appendChild(trainLayer);
+
+      // 3. Draw Station Nodes
+      Object.keys(stationCoordinates).forEach(code => {
+        const p = stationCoordinates[code];
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'station-node');
+        g.setAttribute('id', `node-${code}`);
+        g.setAttribute('onclick', `openStationDrawer('${code}')`);
+
+        const cOuter = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        cOuter.setAttribute('cx', p.x);
+        cOuter.setAttribute('cy', p.y);
+        cOuter.setAttribute('r', '10');
+        cOuter.setAttribute('class', 'outer');
+
+        const cInner = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        cInner.setAttribute('cx', p.x);
+        cInner.setAttribute('cy', p.y);
+        cInner.setAttribute('r', '4');
+        cInner.setAttribute('class', 'inner');
+
+        const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', p.x + 14);
+        txt.setAttribute('y', p.y + 4);
+        txt.textContent = `${p.name} [${code}]`;
+
+        g.appendChild(cOuter);
+        g.appendChild(cInner);
+        g.appendChild(txt);
+        svg.appendChild(g);
+      });
+
+      startTrainAnimationLoop();
+    }
+
+    // Physics Simulation Loop for Trains Moving on Tracks
+    let animRunning = false;
+    function startTrainAnimationLoop() {
+      if (animRunning) return;
+      animRunning = true;
+
+      function updateSimulation() {
+        const layer = document.getElementById('movingTrainLayer');
+        if (layer) {
+          layer.innerHTML = '';
+
+          activeSimTrains.forEach(t => {
+            const u = t.route[t.legIdx];
+            const v = t.route[t.legIdx + 1];
+            const p1 = stationCoordinates[u];
+            const p2 = stationCoordinates[v];
+
+            if (p1 && p2) {
+              t.progress += 0.0018 * t.speed * simSpeedMultiplier;
+              if (t.progress >= 1.0) {
+                t.progress = 0;
+                t.legIdx++;
+                if (t.legIdx >= t.route.length - 1) {
+                  t.legIdx = 0; // Loop or reverse
+                  t.route.reverse();
+                }
+              }
+
+              const curX = p1.x + (p2.x - p1.x) * t.progress;
+              const curY = p1.y + (p2.y - p1.y) * t.progress;
+
+              // Render Moving Train Marker
+              const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              g.setAttribute('class', 'sim-train-marker');
+              g.setAttribute('transform', `translate(${curX}, ${curY})`);
+              g.setAttribute('onclick', `inspectTrainOnMap('${t.id}')`);
+
+              // Outer glow beacon
+              const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              glow.setAttribute('r', '7');
+              glow.setAttribute('fill', t.color);
+              glow.setAttribute('opacity', '0.4');
+
+              // Core train head
+              const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              core.setAttribute('r', '4');
+              core.setAttribute('fill', '#ffffff');
+              core.setAttribute('stroke', t.color);
+              core.setAttribute('stroke-width', '2');
+
+              // Mini train label
+              const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              txt.setAttribute('x', '8');
+              txt.setAttribute('y', '-6');
+              txt.setAttribute('fill', t.color);
+              txt.setAttribute('font-size', '8');
+              txt.setAttribute('font-weight', 'bold');
+              txt.setAttribute('font-family', 'sans-serif');
+              txt.textContent = `${t.id}`;
+
+              g.appendChild(glow);
+              g.appendChild(core);
+              g.appendChild(txt);
+              layer.appendChild(g);
+            }
+          });
+        }
+        requestAnimationFrame(updateSimulation);
+      }
+      requestAnimationFrame(updateSimulation);
+    }
+
+    function inspectTrainOnMap(trainId) {
+      const train = trains.find(t => t.id === trainId);
+      if (train) {
+        showToast(`🚆 ${train.name} (${train.id}) | Seats Avail: ${train.available} | WL: ${train.waitlist}`, true);
+        playChime('success');
+      }
+    }
+
+    // Station Drawer
+    function openStationDrawer(code) {
+      selectedStationForDrawer = code;
+      const st = stationCoordinates[code] || { name: code, code };
+      document.getElementById('drawerStationName').textContent = st.name;
+      document.getElementById('drawerStationCode').textContent = code;
+
+      // Find Connections
+      const conns = [
+        ['NDLS', 'BPL', 700], ['BPL', 'NGP', 390], ['NGP', 'HYB', 500], ['HYB', 'SBC', 620],
+        ['NDLS', 'ADI', 930], ['ADI', 'CSMT', 490], ['CSMT', 'PUNE', 190], ['PUNE', 'SBC', 840],
+        ['SBC', 'MAS', 360], ['NGP', 'HWH', 1120], ['MAS', 'HWH', 1660], ['BPL', 'CSMT', 830]
+      ];
+      const connList = document.getElementById('drawerConnectionsList');
+      connList.innerHTML = '';
+      conns.filter(c => c[0] === code || c[1] === code).forEach(c => {
+        const neighbor = c[0] === code ? c[1] : c[0];
+        const dist = c[2];
+        connList.innerHTML += `
+          <div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; font-size:0.85rem;">
+            <span>➔ <strong>${neighbor}</strong> (${stationCoordinates[neighbor]?.name || neighbor})</span>
+            <span style="color:var(--gold-light); font-family:var(--font-mono);">${dist} km</span>
+          </div>
+        `;
+      });
+
+      // Find Departing Trains
+      const depList = document.getElementById('drawerDeparturesList');
+      depList.innerHTML = '';
+      const departing = trains.filter(t => (t.stops && t.stops.includes(code)) || t.from === code);
+      if (departing.length === 0) {
+        depList.innerHTML = '<div style="color:#64748b; font-size:0.85rem;">No scheduled trains departing.</div>';
+      } else {
+        departing.forEach(t => {
+          depList.innerHTML += `
+            <div style="background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; font-size:0.85rem;">
+              <div style="display:flex; justify-content:space-between;">
+                <strong>${t.name} (${t.id})</strong>
+                <span style="color:#34d399; font-weight:700;">${t.available > 0 ? t.available + ' seats' : 'WL-' + t.waitlist}</span>
+              </div>
+              <div style="color:#94a3b8; font-size:0.75rem; margin-top:2px;">Route: ${t.from} ➔ ${t.to}</div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('stationDrawer').classList.add('open');
+    }
+
+    function closeStationDrawer() {
+      document.getElementById('stationDrawer').classList.remove('open');
+    }
+
+    function setDrawerStationAs(role) {
+      if (!selectedStationForDrawer) return;
+      if (role === 'origin') {
+        document.getElementById('bookSrc').value = selectedStationForDrawer;
+        document.getElementById('dijkstraSrc').value = selectedStationForDrawer;
+        showToast(`Origin set to ${selectedStationForDrawer}`);
+      } else {
+        document.getElementById('bookDst').value = selectedStationForDrawer;
+        document.getElementById('dijkstraDst').value = selectedStationForDrawer;
+        showToast(`Destination set to ${selectedStationForDrawer}`);
+      }
+      closeStationDrawer();
+      onBookingStationChange();
+    }
+
+    // Fleet Table & Search
+    function renderFleetTable(customList = null) {
+      const list = customList || trains;
+      const tbody = document.getElementById('fleetTableBody');
+      tbody.innerHTML = '';
+
+      list.forEach(t => {
+        const availBadge = t.available > 0
+          ? `<span class="seat-status-pill seat-cnf">${t.available} / ${t.total} Seats</span>`
+          : `<span class="seat-status-pill seat-wl">0 Available</span>`;
+
+        const wlBadge = t.waitlist > 0
+          ? `<span class="seat-status-pill seat-wl">WL-${t.waitlist} in Queue</span>`
+          : `<span style="color:#64748b;">Empty</span>`;
+
+        const stopsStr = (t.stops || []).join(' ➔ ');
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong style="color:var(--gold-light);">${t.id}</strong></td>
+            <td><strong>${t.name}</strong></td>
+            <td>${t.from}</td>
+            <td>${t.to}</td>
+            <td style="font-size:0.8rem; color:#94a3b8;">${stopsStr}</td>
+            <td>${t.total}</td>
+            <td>${availBadge}</td>
+            <td>${wlBadge}</td>
+            <td>₹${t.farePerKm.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function filterFleetTable() {
+      const query = document.getElementById('fleetFilterInput').value.trim().toLowerCase();
+      if (!query) return renderFleetTable();
+      const filtered = trains.filter(t =>
+        t.name.toLowerCase().includes(query) ||
+        t.id.toLowerCase().includes(query) ||
+        t.from.toLowerCase().includes(query) ||
+        t.to.toLowerCase().includes(query)
+      );
+      renderFleetTable(filtered);
+    }
+
+    function sortFleet(criterion) {
+      const copy = [...trains];
+      if (criterion === 'available') {
+        copy.sort((a, b) => b.available - a.available);
+        showToast('Sorted by Available Seats (MergeSort)');
+      } else if (criterion === 'id') {
+        copy.sort((a, b) => a.id.localeCompare(b.id));
+        showToast('Sorted by Train Number (QuickSort)');
+      } else if (criterion === 'name') {
+        copy.sort((a, b) => a.name.localeCompare(b.name));
+        showToast('Sorted by Train Name');
+      }
+      renderFleetTable(copy);
+    }
+
+    // Admin Hub Modal & Endpoints
+    function toggleAdminModal() {
+      const m = document.getElementById('adminModal');
+      m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    async function adminAddStation() {
+      const id = document.getElementById('adminStCode').value.trim();
+      const name = document.getElementById('adminStName').value.trim();
+      if (!id || !name) return alert('Enter code and name');
+
+      const res = await fetch('/api/admin/add-station', { method: 'POST', body: `id=${id}&name=${encodeURIComponent(name)}` });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Station ${id} added successfully!`, true);
+        toggleAdminModal();
+        await loadData();
+      } else {
+        alert(data.error);
+      }
+    }
+
+    async function adminAddTrack() {
+      const src = document.getElementById('adminTrackSrc').value.trim();
+      const dst = document.getElementById('adminTrackDst').value.trim();
+      const dist = document.getElementById('adminTrackDist').value.trim();
+      if (!src || !dst || !dist) return alert('Fill track fields');
+
+      const res = await fetch('/api/admin/add-track', { method: 'POST', body: `src=${src}&dst=${dst}&distance=${dist}` });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Track ${src} <-> ${dst} connected!`, true);
+        toggleAdminModal();
+        await loadData();
+      } else {
+        alert(data.error);
+      }
+    }
+
+    async function adminSimulateBooking() {
+      const t = trains[0];
+      const names = ['Vikram Rathore', 'Devika Singh', 'Rohan Verma', 'Kavita Patel'];
+      const name = names[Math.floor(Math.random() * names.length)];
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        body: `trainId=${t.id}&name=${encodeURIComponent(name)}&age=30&gender=M&src=${t.from}&dst=${t.to}`
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Simulated Booking: ${name} (${data.status} • ${data.pnr})`, true);
+        playChime('success');
+        await loadData();
+      }
+    }
+
+    async function adminSimulateCancel() {
+      const res = await fetch('/api/cancel', {
+        method: 'POST',
+        body: 'pnr=PNR-100101'
+      });
+      const data = await res.json();
+      showToast(data.message, true);
+      playChime('cancel');
+      await loadData();
+    }
+
+    window.onload = async () => {
+      await loadData();
+      await initAuth();
+      initGoogleIdentityServices();
+    };
+  </script>
+</body>
+</html>
