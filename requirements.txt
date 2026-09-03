@@ -6,7 +6,7 @@
 # --------------------------------------------------------------------
 # Create a new repository on https://github.com/new (leave it empty, without README/license)
 # Then copy and paste your repository link below:
-GITHUB_REPOSITORY_URL=https://github.com/<your-username>/<your-repo-name>.git
+GITHUB_REPOSITORY_URL=https://github.com/KushalSindhe/Railway-.git
 DEFAULT_BRANCH=main
 
 # 2. RUNTIME & SYSTEM REQUIREMENTS:
