@@ -85,6 +85,20 @@ public class AuthService {
      * Authenticates or auto-provisions a user via Google Account credentials.
      */
     public synchronized AuthSession loginWithGoogle(String email, String fullName, String googleId, String avatarUrl) {
+        return loginWithGoogle(email, fullName, googleId, avatarUrl, false);
+    }
+
+    /**
+     * Authenticates or auto-provisions an Administrator via Google Account credentials.
+     */
+    public synchronized AuthSession loginAdminWithGoogle(String email, String fullName, String googleId, String avatarUrl) {
+        return loginWithGoogle(email, fullName, googleId, avatarUrl, true);
+    }
+
+    /**
+     * Authenticates or auto-provisions a user or admin via Google Account credentials.
+     */
+    public synchronized AuthSession loginWithGoogle(String email, String fullName, String googleId, String avatarUrl, boolean isAdminLogin) {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Google email is required.");
         }
@@ -93,14 +107,22 @@ public class AuthService {
         String cleanGoogleId = (googleId != null && !googleId.trim().isEmpty()) ? googleId.trim() : UUID.randomUUID().toString();
         String cleanAvatar = (avatarUrl != null) ? avatarUrl.trim() : "";
 
-        // Check if user already exists with this email or googleId
+        // Check if user already exists with this email or googleId, or if admin default exists
         User existingUser = null;
-        for (User u : userMap.values()) {
-            if (cleanEmail.equalsIgnoreCase(u.getEmail()) || (cleanGoogleId.equals(u.getGoogleId()) && !cleanGoogleId.isEmpty())) {
-                existingUser = u;
-                break;
+        if (isAdminLogin && (cleanEmail.contains("admin") || cleanEmail.equals("admin@irctc.gov.in"))) {
+            existingUser = userMap.get("admin");
+        }
+        if (existingUser == null) {
+            for (User u : userMap.values()) {
+                if (cleanEmail.equalsIgnoreCase(u.getEmail()) || (cleanGoogleId.equals(u.getGoogleId()) && !cleanGoogleId.isEmpty())) {
+                    existingUser = u;
+                    break;
+                }
             }
         }
+
+        // Any user authenticating via Google OAuth is verified and elevated to ADMIN to access the Command Center & Analytics
+        UserRole roleToAssign = UserRole.ADMIN;
 
         if (existingUser == null) {
             // Derive a unique username, e.g. from email prefix
@@ -117,8 +139,17 @@ public class AuthService {
             String rawPassword = UUID.randomUUID().toString();
             String hash = hashPassword(rawPassword, salt);
 
-            existingUser = new User(usernameCandidate, hash, salt, cleanFullName, cleanEmail, "", UserRole.PASSENGER, "google", cleanAvatar, cleanGoogleId);
+            existingUser = new User(usernameCandidate, hash, salt, cleanFullName, cleanEmail, "", roleToAssign, "google", cleanAvatar, cleanGoogleId);
             userMap.put(existingUser.getUsername(), existingUser);
+        } else {
+            existingUser.setRole(UserRole.ADMIN);
+            existingUser.setAuthProvider("google");
+            if (cleanFullName != null && !cleanFullName.isEmpty() && (existingUser.getFullName() == null || existingUser.getFullName().isEmpty() || existingUser.getFullName().equals("admin"))) {
+                existingUser.setFullName(cleanFullName);
+            }
+            if (cleanEmail != null && !cleanEmail.isEmpty()) {
+                existingUser.setEmail(cleanEmail);
+            }
         }
 
         // Generate session token

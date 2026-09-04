@@ -13,8 +13,8 @@ public class User {
     private String fullName;
     private String email;
     private String phone;
-    private final UserRole role;
-    private final String authProvider;
+    private UserRole role;
+    private String authProvider;
     private final String avatarUrl;
     private final String googleId;
     private final LocalDateTime createdAt;
@@ -91,12 +91,24 @@ public class User {
         return role;
     }
 
+    public void setRole(UserRole role) {
+        if (role != null) {
+            this.role = role;
+        }
+    }
+
     public boolean isAdmin() {
         return role == UserRole.ADMIN;
     }
 
     public String getAuthProvider() {
         return authProvider;
+    }
+
+    public void setAuthProvider(String authProvider) {
+        if (authProvider != null && !authProvider.trim().isEmpty()) {
+            this.authProvider = authProvider.trim();
+        }
     }
 
     public String getAvatarUrl() {
