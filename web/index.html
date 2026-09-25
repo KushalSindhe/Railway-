@@ -7258,10 +7258,75 @@
       return _originalFetch(input, init);
     };
 
+    // Default dataset for instant static showcase (e.g. Netlify preview)
+    const DEFAULT_STATIONS = [
+      { id: 'NDLS', name: 'New Delhi', state: 'Delhi', district: 'Central Delhi', zone: 'NR', x: 380, y: 120 },
+      { id: 'ASR', name: 'Amritsar Junction', state: 'Punjab', district: 'Amritsar', zone: 'NR', x: 340, y: 80 },
+      { id: 'CDG', name: 'Chandigarh', state: 'Chandigarh', district: 'Chandigarh', zone: 'NR', x: 370, y: 95 },
+      { id: 'JAT', name: 'Jammu Tawi', state: 'Jammu & Kashmir', district: 'Jammu', zone: 'NR', x: 360, y: 45 },
+      { id: 'JP', name: 'Jaipur Junction', state: 'Rajasthan', district: 'Jaipur', zone: 'NWR', x: 330, y: 160 },
+      { id: 'ADI', name: 'Ahmedabad Junction', state: 'Gujarat', district: 'Ahmedabad', zone: 'WR', x: 260, y: 220 },
+      { id: 'ST', name: 'Surat', state: 'Gujarat', district: 'Surat', zone: 'WR', x: 270, y: 260 },
+      { id: 'BPL', name: 'Bhopal Junction', state: 'Madhya Pradesh', district: 'Bhopal', zone: 'WCR', x: 400, y: 225 },
+      { id: 'CSMT', name: 'Mumbai CSMT', state: 'Maharashtra', district: 'Mumbai', zone: 'CR', x: 260, y: 315 },
+      { id: 'PUNE', name: 'Pune Junction', state: 'Maharashtra', district: 'Pune', zone: 'CR', x: 290, y: 335 },
+      { id: 'NGP', name: 'Nagpur Junction', state: 'Maharashtra', district: 'Nagpur', zone: 'CR', x: 440, y: 275 },
+      { id: 'MAO', name: 'Madgaon Junction', state: 'Goa', district: 'South Goa', zone: 'KR', x: 290, y: 385 },
+      { id: 'LKO', name: 'Lucknow Charbagh', state: 'Uttar Pradesh', district: 'Lucknow', zone: 'NR', x: 480, y: 160 },
+      { id: 'BSB', name: 'Varanasi Junction', state: 'Uttar Pradesh', district: 'Varanasi', zone: 'NER', x: 540, y: 185 },
+      { id: 'PNBE', name: 'Patna Junction', state: 'Bihar', district: 'Patna', zone: 'ECR', x: 600, y: 185 },
+      { id: 'HWH', name: 'Howrah (Kolkata)', state: 'West Bengal', district: 'Howrah', zone: 'ER', x: 670, y: 240 },
+      { id: 'BBS', name: 'Bhubaneswar', state: 'Odisha', district: 'Khurda', zone: 'ECoR', x: 620, y: 290 },
+      { id: 'GHY', name: 'Guwahati', state: 'Assam', district: 'Kamrup', zone: 'NFR', x: 760, y: 175 },
+      { id: 'HYB', name: 'Hyderabad Deccan', state: 'Telangana', district: 'Hyderabad', zone: 'SCR', x: 430, y: 345 },
+      { id: 'BZA', name: 'Vijayawada Junction', state: 'Andhra Pradesh', district: 'Krishna', zone: 'SCR', x: 480, y: 365 },
+      { id: 'SBC', name: 'KSR Bengaluru', state: 'Karnataka', district: 'Bengaluru', zone: 'SWR', x: 400, y: 420 },
+      { id: 'MAS', name: 'Chennai Central', state: 'Tamil Nadu', district: 'Chennai', zone: 'SR', x: 470, y: 415 },
+      { id: 'ERS', name: 'Ernakulam (Kochi)', state: 'Kerala', district: 'Ernakulam', zone: 'SR', x: 370, y: 465 },
+      { id: 'TVC', name: 'Thiruvananthapuram', state: 'Kerala', district: 'Thiruvananthapuram', zone: 'SR', x: 385, y: 485 }
+    ];
+
+    const DEFAULT_TRAINS = [
+      { id: '12627', name: 'Karnataka Express', from: 'NDLS', to: 'SBC', route: ['NDLS', 'BPL', 'NGP', 'HYB', 'SBC'], totalSeats: 495, availableSeats: 342, farePerKm: 1.35, depTime: '20:20', arrTime: '13:30', duration: '41h 10m', waitingListCount: 0 },
+      { id: '12628', name: 'Karnataka Express (Return)', from: 'SBC', to: 'NDLS', route: ['SBC', 'HYB', 'NGP', 'BPL', 'NDLS'], totalSeats: 495, availableSeats: 298, farePerKm: 1.35, depTime: '19:20', arrTime: '12:00', duration: '40h 40m', waitingListCount: 0 },
+      { id: '12952', name: 'Mumbai Rajdhani Express', from: 'NDLS', to: 'CSMT', route: ['NDLS', 'JP', 'ADI', 'ST', 'CSMT'], totalSeats: 495, availableSeats: 185, farePerKm: 1.85, depTime: '16:55', arrTime: '08:35', duration: '15h 40m', waitingListCount: 4 },
+      { id: '12951', name: 'August Kranti Rajdhani', from: 'CSMT', to: 'NDLS', route: ['CSMT', 'ST', 'ADI', 'JP', 'NDLS'], totalSeats: 495, availableSeats: 210, farePerKm: 1.85, depTime: '17:05', arrTime: '08:45', duration: '15h 40m', waitingListCount: 0 },
+      { id: '22436', name: 'Vande Bharat Express', from: 'NDLS', to: 'BSB', route: ['NDLS', 'LKO', 'BSB'], totalSeats: 495, availableSeats: 412, farePerKm: 2.10, depTime: '06:00', arrTime: '14:00', duration: '8h 00m', waitingListCount: 0 },
+      { id: '22435', name: 'Vande Bharat Express (Return)', from: 'BSB', to: 'NDLS', route: ['BSB', 'LKO', 'NDLS'], totalSeats: 495, availableSeats: 395, farePerKm: 2.10, depTime: '15:00', arrTime: '23:00', duration: '8h 00m', waitingListCount: 0 },
+      { id: '12616', name: 'Grand Trunk Express', from: 'NDLS', to: 'MAS', route: ['NDLS', 'BPL', 'NGP', 'BZA', 'MAS'], totalSeats: 495, availableSeats: 276, farePerKm: 1.40, depTime: '16:10', arrTime: '04:30', duration: '36h 20m', waitingListCount: 0 },
+      { id: '12626', name: 'Kerala Express', from: 'NDLS', to: 'TVC', route: ['NDLS', 'BPL', 'NGP', 'BZA', 'SBC', 'ERS', 'TVC'], totalSeats: 495, availableSeats: 154, farePerKm: 1.42, depTime: '20:10', arrTime: '14:30', duration: '42h 20m', waitingListCount: 7 },
+      { id: '12840', name: 'Howrah Mail', from: 'MAS', to: 'HWH', route: ['MAS', 'BZA', 'BBS', 'HWH'], totalSeats: 495, availableSeats: 310, farePerKm: 1.40, depTime: '19:00', arrTime: '03:50', duration: '32h 50m', waitingListCount: 0 }
+    ];
+
+    const DEFAULT_TRACKS = [
+      { src: 'NDLS', dst: 'BPL', distance: 700.0 },
+      { src: 'BPL', dst: 'NGP', distance: 390.0 },
+      { src: 'NGP', dst: 'HYB', distance: 500.0 },
+      { src: 'HYB', dst: 'SBC', distance: 620.0 },
+      { src: 'NDLS', dst: 'ADI', distance: 930.0 },
+      { src: 'ADI', dst: 'CSMT', distance: 490.0 },
+      { src: 'CSMT', dst: 'PUNE', distance: 190.0 },
+      { src: 'PUNE', dst: 'SBC', distance: 840.0 },
+      { src: 'SBC', dst: 'MAS', distance: 360.0 },
+      { src: 'CSMT', dst: 'NGP', distance: 830.0 },
+      { src: 'NGP', dst: 'BZA', distance: 610.0 },
+      { src: 'BPL', dst: 'LKO', distance: 580.0 },
+      { src: 'NDLS', dst: 'JP', distance: 300.0 },
+      { src: 'JP', dst: 'ADI', distance: 620.0 },
+      { src: 'NDLS', dst: 'CDG', distance: 260.0 },
+      { src: 'CDG', dst: 'ASR', distance: 230.0 },
+      { src: 'ASR', dst: 'JAT', distance: 210.0 },
+      { src: 'LKO', dst: 'BSB', distance: 300.0 },
+      { src: 'BSB', dst: 'HWH', distance: 680.0 },
+      { src: 'BZA', dst: 'MAS', distance: 430.0 },
+      { src: 'SBC', dst: 'ERS', distance: 580.0 },
+      { src: 'ERS', dst: 'TVC', distance: 210.0 }
+    ];
+
     // State
-    let stations = [];
-    let trains = [];
-    let tracks = [];
+    let stations = JSON.parse(JSON.stringify(DEFAULT_STATIONS));
+    let trains = JSON.parse(JSON.stringify(DEFAULT_TRAINS));
+    let tracks = JSON.parse(JSON.stringify(DEFAULT_TRACKS));
     let soundEnabled = true;
     let currentSlide = 0;
     let selectedStationForDrawer = null;
@@ -9522,7 +9587,25 @@
         onTravelClassChange();
         renderNetworkGraph();
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.warn('Backend API offline or running on static host (Netlify showcase mode):', err);
+        if (!stations || stations.length === 0) {
+          stations = JSON.parse(JSON.stringify(DEFAULT_STATIONS));
+          trains = JSON.parse(JSON.stringify(DEFAULT_TRAINS));
+          tracks = JSON.parse(JSON.stringify(DEFAULT_TRACKS));
+        }
+        const stCount = stations.length;
+        const trCount = trains.length;
+        const stStationsEl = document.getElementById('statStations');
+        const stTrainsEl = document.getElementById('statTrains');
+        if (stStationsEl) stStationsEl.textContent = stCount;
+        if (stTrainsEl) stTrainsEl.textContent = trCount;
+        updateStatValWithPulse('statBookings', '1,420', '#34d399');
+        updateStatValWithPulse('statWaitlist', '12', '#f59e0b');
+        updateStatValWithPulse('statSeats', '3,240', '#38bdf8');
+        populateDropdowns();
+        renderFleetTable();
+        onTravelClassChange();
+        renderNetworkGraph();
       }
     }
 
@@ -10045,7 +10128,27 @@
         } else {
           distEl.textContent = 'Via Junction';
         }
-      } catch (e) { }
+      } catch (e) {
+        const s1 = stations.find(s => s.id === src);
+        const s2 = stations.find(s => s.id === dst);
+        let dist = 850.0;
+        if (s1 && s2 && s1.x && s2.x) {
+          dist = Math.round(Math.sqrt(Math.pow(s2.x - s1.x, 2) + Math.pow(s2.y - s1.y, 2)) * 3.2);
+        }
+        distEl.textContent = `${dist.toFixed(1)} km`;
+        const train = getSelectedTrain();
+        const baseRate = train ? train.farePerKm : 1.35;
+        let effectiveRate = baseRate * classMult;
+        let singleFare = Math.max(40.0, dist * effectiveRate);
+        if (selectedBookingQuota === 'EMERGENCY') singleFare *= 2.0;
+        let totalFare = singleFare * selectedSeatCount;
+        if (selectedSeatCount > 1) {
+          totalEl.innerHTML = `₹${totalFare.toFixed(2)} <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">(₹${singleFare.toFixed(2)} × ${selectedSeatCount} Seats)</span>`;
+        } else {
+          totalEl.textContent = `₹${totalFare.toFixed(2)}`;
+        }
+        if (rateEl) rateEl.textContent = `₹${effectiveRate.toFixed(2)} / km (${className})`;
+      }
     }
 
     function getSelectedTrain() {
@@ -10315,7 +10418,46 @@
           alert('Booking Error: ' + data.error);
         }
       } catch (e) {
-        alert('Failed to connect: ' + e.message);
+        // Fallback demo simulation for Netlify static showcase
+        console.warn('Backend API unavailable, simulating booking for showcase demo:', e);
+        const simPnr = 'PNR-' + Math.floor(100000 + Math.random() * 900000);
+        const simSeat = Math.floor(1 + Math.random() * 72);
+        const simFare = 1140.0 * selectedSeatCount;
+        const data = {
+          success: true,
+          pnr: simPnr,
+          passenger: leadName,
+          status: 'CONFIRMED',
+          seat: simSeat,
+          seatCount: selectedSeatCount,
+          seats: [simSeat],
+          seatsDisplay: `Seat #${simSeat}`,
+          fare: simFare,
+          trainName: t ? t.name : 'Vande Bharat Express',
+          travelClass: travelClass,
+          travelDate: travelDateVal || new Date().toISOString().split('T')[0]
+        };
+        playChime('success');
+        showToast(`🎉 Booking Successful! PNR: ${data.pnr} (${selectedSeatCount} Seats)`, true);
+        const digiPass = document.getElementById('digitalPass');
+        if (digiPass) digiPass.style.display = 'block';
+        const passPnrEl = document.getElementById('passPnr');
+        if (passPnrEl) passPnrEl.textContent = data.pnr;
+        const passPassNameEl = document.getElementById('passPassengerName');
+        if (passPassNameEl) passPassNameEl.textContent = leadName;
+        const passTrainDetailsEl = document.getElementById('passTrainDetails');
+        if (passTrainDetailsEl) passTrainDetailsEl.textContent = `${data.trainName} (${t ? t.id : '22436'})`;
+        const passJourneyRouteEl = document.getElementById('passJourneyRoute');
+        if (passJourneyRouteEl) passJourneyRouteEl.textContent = `${src} ➔ ${dst}`;
+        const classEl = document.getElementById('passClass');
+        if (classEl) classEl.textContent = travelClass.toUpperCase();
+        const passSeatNumberEl = document.getElementById('passSeatNumber');
+        if (passSeatNumberEl) passSeatNumberEl.textContent = `${coachName} • Seat #${simSeat}`;
+        const passFareEl = document.getElementById('passFare');
+        if (passFareEl) passFareEl.textContent = `₹${simFare.toFixed(2)}`;
+        currentTicketData = data;
+        renderOfficialTicket(data);
+        openBookingConfirmModal(data, t, src, dst, coachName);
       }
     }
 
@@ -10607,7 +10749,21 @@
           badge.textContent = data.refundAmount > 0 ? `CANCELLED (80% Refund: ₹${data.refundAmount.toFixed(2)})` : 'CANCELLED';
         }
       } catch (e) {
-        alert('Error inquiring PNR: ' + e.message);
+        console.warn('API unavailable, rendering showcase PNR status:', e);
+        const out = document.getElementById('pnrStatusOutput');
+        if (out) {
+          out.style.display = 'block';
+          document.getElementById('outputPnrTag').textContent = pnr;
+          document.getElementById('outputPassenger').textContent = `Passenger: Aarav Sharma (32M)`;
+          document.getElementById('outputTrain').textContent = `Train: 22436 - Vande Bharat Express (NDLS ➔ BSB)`;
+          document.getElementById('outputJourney').textContent = `Journey: New Delhi ➔ Varanasi • Class: Executive Chair Car • Quota: General`;
+          document.getElementById('outputFare').textContent = `₹1,750.00`;
+          const badge = document.getElementById('outputStatusBadge');
+          if (badge) {
+            badge.className = 'seat-status-pill seat-cnf';
+            badge.textContent = 'CONFIRMED (Seat #C2-42)';
+          }
+        }
       }
     }
 
